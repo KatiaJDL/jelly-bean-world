@@ -2600,6 +2600,79 @@ static PyObject* simulator_is_active(PyObject *self, PyObject *args) {
     }
 }
 
+/**
+ * Retrieves the x coordinates of the given list agents in the simulation.
+ *
+ * \param   self    Pointer to the Python object calling this method.
+ * \param   args    Arguments:
+ *                  - Handle to the native simulator object as a PyLong.
+ *                  - Handle to the native client object as a PyLong. If this
+ *                    is None, `get_agent_states` is directly invoked on the
+ *                    simulator object. Otherwise, the client sends a
+ *                    get_agent_states message to the server and waits for its
+ *                    response.
+ *                  - (list of ints) A list of agent IDs whose states to query.
+ * \returns A Python list of x coordinates, parallel to the given list of IDs.
+ */
+static PyObject* simulator_get_x_coordinates(PyObject *self, PyObject *args) {
+    PyObject* py_sim_handle;
+    PyObject* py_client_handle;
+    PyObject* py_agent_ids;
+    if (!PyArg_ParseTuple(args, "OOO", &py_sim_handle, &py_client_handle, &py_agent_ids))
+        return NULL;
+    if (!PyList_Check(py_agent_ids)) {
+        PyErr_SetString(PyExc_TypeError, "'agent_ids' must be a list.\n");
+        return NULL;
+    }
+
+    size_t agent_count = (size_t) PyList_Size(py_agent_ids);
+    uint64_t* agent_ids = (uint64_t*) malloc(max((size_t) 1, sizeof(uint64_t) * agent_count));
+    if (agent_ids == nullptr) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    for (size_t i = 0; i < agent_count; i++)
+        agent_ids[i] = PyLong_AsUnsignedLongLong(PyList_GetItem(py_agent_ids, i));
+
+    if (py_client_handle == Py_None) {
+        /* the simulation is local, so call get_agent_states directly */
+        agent_state** agent_states = (agent_state**) malloc(max((size_t) 1, sizeof(agent_state*) * agent_count));
+        if (agent_states == nullptr) {
+            free(agent_ids);
+            PyErr_NoMemory();
+            return NULL;
+        }
+
+        simulator<py_simulator_data>* sim_handle =
+                (simulator<py_simulator_data>*) PyLong_AsVoidPtr(py_sim_handle);
+        sim_handle->get_agent_states(agent_states, agent_ids, agent_count);
+
+        PyObject* py_x_coordinates = PyList_New(agent_count);
+        if (py_x_coordinates == NULL) {
+            fprintf(stderr, "simulator_get_x_coordinates ERROR: PyList_New returned NULL.\n");
+            for (size_t i = 0; i < agent_count; i++)
+                if (agent_states[i] != nullptr) agent_states[i]->lock.unlock();
+            free(agent_ids); free(agent_states);
+            return NULL;
+        }
+        for (size_t i = 0; i < agent_count; i++) {
+            if (agent_states[i] == nullptr) {
+                Py_INCREF(Py_None);
+                PyList_SetItem(py_x_coordinates, i, Py_None);
+            } else {
+                PyList_SetItem(py_x_coordinates, i, PyLong_FromUnsignedLongLong(agent_states[i]->current_position.x));
+                agent_states[i]->lock.unlock();
+            }
+        }
+        free(agent_ids);
+        free(agent_states);
+        return py_x_coordinates;
+    } else {
+        // We will handle the remote case later
+        return NULL;
+    }
+}
+
 } /* namespace jbw */
 
 static PyMethodDef SimulatorMethods[] = {
@@ -2628,6 +2701,7 @@ static PyMethodDef SimulatorMethods[] = {
     {"agent_ids",  jbw::simulator_agent_ids, METH_VARARGS, "Returns a list of the IDs of all agents in the simulation environment."},
     {"agent_states",  jbw::simulator_agent_states, METH_VARARGS, "Returns a list of the agent states with the specified IDs in the simulation environment."},
     {"set_active",  jbw::simulator_set_active, METH_VARARGS, "Sets whether the agent is active or inactive."},
+    {"get_x_coordinates", jbw::simulator_get_x_coordinates, METH_VARARGS, "Returns a list of x coordinates of the given agents"},
     {"is_active",  jbw::simulator_is_active, METH_VARARGS, "Gets whether the agent is active or inactive."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
