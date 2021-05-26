@@ -399,6 +399,16 @@ public:
 		}
 	}
 
+	void resample(RNGType& rng) {
+#if SAMPLING_METHOD == MH_SAMPLING
+		log_cache<float>& logarithm = log_cache<float>::instance();
+#endif
+
+		/* Propose un new distribution */
+
+		/* Accept or not */
+	}
+
 private:
 	/* NOTE: we assume `neighborhood[0]` is the patch we're sampling */
 	template<typename RNGType>
