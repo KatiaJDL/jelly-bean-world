@@ -605,8 +605,8 @@ public:
 		neighborhood[1] = &patches.values[i + 1].values[j1 + 1];
 		neighborhood[2] = &patches.values[i].values[j0];
 		neighborhood[3] = &patches.values[i].values[j0 + 1];
-		for (unsigned int k = 0; k < 4; k++)
-			neighborhood[k]->fixed = true;
+		// for (unsigned int k = 0; k < 4; k++)
+		// 	neighborhood[k]->fixed = true;
 
 		return index;
 	}
@@ -663,6 +663,14 @@ public:
 		core::free(world.patches);
 		core::free(world.cache);
 		world.rng.~linear_congruential_engine();
+	}
+
+	inline void update_patches() {
+		for(auto i = patches.begin(); patches.end(); i++) {
+
+		}
+
+
 	}
 
 private:

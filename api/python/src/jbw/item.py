@@ -16,13 +16,32 @@ from __future__ import absolute_import, division, print_function
 
 from enum import Enum
 
-__all__ = ['Item', 'IntensityFunction', 'InteractionFunction']
+__all__ = ['Item', 'IntensityFunction', 'InteractionFunction', 'RegenerationFunction']
+
+class RegenerationFunction(Enum):
+
+  ZERO = 0
+  """A function that always outputs zero: f_i(x, t) = 0."""
+
+  CONSTANT = 1
+  """A function that outputs a constant: f_i(x, t) = c. The arguments for this
+  function should be a list of size 1 containing the constant: [c]."""
+
+  CRENEL = 3
+  """This function represents the climat dynamics described in the paper  
+  A synthesis of the theories and concepts of early human evolution, Mark A. Maslin,
+  Susanne Shultz and Martin H. Trauth Published:05 March 2015
+  https://doi.org/10.1098/rstb.2014.0064 
+  
+  It's a temporal non-stationary function."""
+
 
 class Item(object):
   """Represents an item in the world (e.g., jelly beans)."""
 
   def __init__(self, name, scent, color, required_item_counts, required_item_costs,
-               blocks_movement, visual_occlusion, intensity_fn, intensity_fn_args, interaction_fns):
+               blocks_movement, visual_occlusion, intensity_fn, intensity_fn_args, 
+               interaction_fns, regeneration_fn = RegenerationFunction.ZERO, regeneration_fn_args = []):
     """Creates a new item.
   
     Arguments:
@@ -48,6 +67,9 @@ class Item(object):
                             between items of this type and items of type i, and
                             the remaining elements of the sublist contain the
                             parameters to this interaction function.
+      regeneration_fn:      The RegenerationFunction used by the Gibbs sampler
+                            for updating the patches in the map.
+      regeneration_fn_args  A list of float arguments to regeneration_fn
     """
     self.name = name
     self.scent = scent
@@ -58,6 +80,8 @@ class Item(object):
     self.visual_occlusion = visual_occlusion
     self.intensity_fn = intensity_fn.value
     self.intensity_fn_args = intensity_fn_args
+    self.regeneration_fn = regeneration_fn.value
+    self.regeneration_fn_args = regeneration_fn_args
     self.interaction_fns = interaction_fns
     assert all([len(l) > 0 and type(l[0]) == InteractionFunction for l in interaction_fns]), 'Each sublist in `interaction_fns` must contain an InteractionFunction instance as the first element.'
     for l in interaction_fns:
