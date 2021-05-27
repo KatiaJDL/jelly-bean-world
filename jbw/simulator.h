@@ -19,6 +19,8 @@
 
 #define _USE_MATH_DEFINES
 
+#include <iostream>
+
 #include <core/array.h>
 #include <core/utility.h>
 #include <atomic>
@@ -296,6 +298,7 @@ inline bool init(
         properties.required_item_costs[i] = required_item_costs[i];
     properties.blocks_movement = blocks_movement;
     properties.visual_occlusion = visual_occlusion;
+    properties.lifetime = lifetime;
     return true;
 }
 
@@ -360,7 +363,8 @@ inline bool read(item_properties& properties, Stream& in,
      || !read(properties.required_item_costs, in, item_type_count)
      || !read(properties.blocks_movement, in)
      || !read(properties.visual_occlusion, in)
-     || !read(properties.intensity_fn, in))
+     || !read(properties.intensity_fn, in)
+     || !read(properties.lifetime, in))
     {
         free(properties.name); free(properties.scent); free(properties.color);
         free(properties.required_item_counts); free(properties.required_item_costs);
@@ -393,7 +397,8 @@ inline bool write(const item_properties& properties, Stream& out,
      || !write(properties.required_item_costs, out, item_type_count)
      || !write(properties.blocks_movement, out)
      || !write(properties.visual_occlusion, out)
-     || !write(properties.intensity_fn, out))
+     || !write(properties.intensity_fn, out)
+     || !write(properties.lifetime, out))
         return false;
 
     for (unsigned int i = 0; i < item_type_count; i++)
@@ -848,8 +853,14 @@ struct agent_state {
             for (unsigned int j = 0; j < neighborhood[i]->items.length; j++) {
                 const item& item = neighborhood[i]->items[j];
 
-                /* check if the item is too old; if so, delete it */
+                /* check if the deleted item is too old; if so, delete it */
                 if (item.deletion_time > 0 && current_time >= item.deletion_time + config.deleted_item_lifetime) {
+                    neighborhood[i]->items.remove(j); j--; continue;
+                }
+
+                /* check if the item is too old; if so, delete it */
+                if (config.item_types[item.item_type].lifetime != 0 && current_time >= config.item_types[item.item_type].lifetime + item.creation_time) {
+                    std::cout << "remove" << std::endl;
                     neighborhood[i]->items.remove(j); j--; continue;
                 }
 
@@ -1957,7 +1968,7 @@ public:
                                 for (unsigned int j = 0; j < neighborhood[i]->items.length; j++) {
                                     const item& item = neighborhood[i]->items[j];
 
-                                    /* check if the item is too old; if so, ignore it */
+                                    /* check if the deleted item is too old; if so, ignore it */
                                     if (item.deletion_time > 0 && time >= item.deletion_time + config.deleted_item_lifetime)
                                         continue;
 
