@@ -41,7 +41,8 @@ class Item(object):
 
   def __init__(self, name, scent, color, required_item_counts, required_item_costs,
                blocks_movement, visual_occlusion, intensity_fn, intensity_fn_args, 
-               interaction_fns, regeneration_fn = RegenerationFunction.ZERO, regeneration_fn_args = []):
+               interaction_fns, regeneration_fn = RegenerationFunction.ZERO, 
+               regeneration_fn_args = [], lifetime = 0):
     """Creates a new item.
   
     Arguments:
@@ -69,7 +70,9 @@ class Item(object):
                             parameters to this interaction function.
       regeneration_fn:      The RegenerationFunction used by the Gibbs sampler
                             for updating the patches in the map.
-      regeneration_fn_args  A list of float arguments to regeneration_fn
+      regeneration_fn_args: A list of float arguments to regeneration_fn
+      lifetime:             The number of timesteps after which the item is destroyed.
+                            0 means an infinite lifetime.
     """
     self.name = name
     self.scent = scent
@@ -83,6 +86,7 @@ class Item(object):
     self.regeneration_fn = regeneration_fn.value
     self.regeneration_fn_args = regeneration_fn_args
     self.interaction_fns = interaction_fns
+    self.lifetime = lifetime
     assert all([len(l) > 0 and type(l[0]) == InteractionFunction for l in interaction_fns]), 'Each sublist in `interaction_fns` must contain an InteractionFunction instance as the first element.'
     for l in interaction_fns:
       l[0] = l[0].value

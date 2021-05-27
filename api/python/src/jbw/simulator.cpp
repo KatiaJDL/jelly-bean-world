@@ -14,6 +14,8 @@
  * the License.
  */
 
+#include <iostream>
+
 #include <Python.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
@@ -859,6 +861,7 @@ static inline void import_errors() {
  *                    functions, where the first element in each sublist is the
  *                    ID of the interaction function, and the remaining
  *                    elements are its arguments.
+ *                  - (int) THe lifetime of the item, 0 if eternal life
  * \returns Pointer to the new simulator.
  */
 static PyObject* simulator_new(PyObject *self, PyObject *args)
@@ -924,11 +927,14 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
         PyObject* py_required_item_costs;
         PyObject* blocks_movement;
         float visual_occlusion;
+        unsigned int lifetime;
         unsigned int py_intensity_fn;
         PyObject* py_intensity_fn_args;
         PyObject* py_interaction_fn_args;
-        if (!PyArg_ParseTuple(next_py_item, "sOOOOOfIOO", &name, &py_scent, &py_color, &py_required_item_counts,
-          &py_required_item_costs, &blocks_movement, &visual_occlusion, &py_intensity_fn, &py_intensity_fn_args, &py_interaction_fn_args)) {
+
+        if (!PyArg_ParseTuple(next_py_item, "sOOOOOfIOO|I", &name, &py_scent, &py_color, &py_required_item_counts,
+          &py_required_item_costs, &blocks_movement, &visual_occlusion, &py_intensity_fn, &py_intensity_fn_args, 
+          &py_interaction_fn_args, &lifetime)) {
             fprintf(stderr, "Invalid argument types for item property in call to 'simulator_c.new'.\n");
             return NULL;
         }
@@ -949,6 +955,7 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
         for (Py_ssize_t i = 0; i < item_type_count; i++)
             new_item.required_item_costs[i] = PyLong_AsUnsignedLong(PyList_GetItem(py_required_item_costs, i));
         new_item.blocks_movement = (blocks_movement == Py_True);
+        new_item.lifetime = lifetime;
         new_item.visual_occlusion = visual_occlusion;
 
         pair<float*, Py_ssize_t> intensity_fn_args = PyArg_ParseFloatList(py_intensity_fn_args);

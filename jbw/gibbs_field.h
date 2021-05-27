@@ -399,11 +399,14 @@ public:
 		}
 	}
 
+	template<typename RNGType>
 	void resample(RNGType& rng) {
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
 #endif
 
+		//patch_type& current = *neighborhood.top_left_neighborhood[0];
+		//float real_intensity = current.items.length / n;
 		/* Propose un new distribution */
 
 		/* Accept or not */

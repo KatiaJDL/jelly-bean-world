@@ -166,6 +166,7 @@ struct item_properties {
 
     bool blocks_movement;
     float visual_occlusion;
+    unsigned int lifetime;
 
     energy_function<intensity_function> intensity_fn;
     energy_function<interaction_function>* interaction_fns;
@@ -237,7 +238,8 @@ inline bool init(
         const float* scent, const float* color, const unsigned int* required_item_counts,
         const unsigned int* required_item_costs, bool blocks_movement, float visual_occlusion,
         const energy_function<intensity_function>& intensity_fn, const InteractionFunctionInfo& interaction_fns,
-        unsigned int scent_dimension, unsigned int color_dimension, unsigned int item_type_count)
+        unsigned int scent_dimension, unsigned int color_dimension, unsigned int item_type_count,
+        const unsigned int lifetime)
 {
     if (!init(properties.name, name, name_length))
         return false;
@@ -308,8 +310,8 @@ inline bool init(
     return init(properties, src.name.data, src.name.length,
         src.scent, src.color, src.required_item_counts,
         src.required_item_costs, src.blocks_movement, src.visual_occlusion,
-        src.intensity_fn, src.interaction_fns,
-        scent_dimension, color_dimension, item_type_count);
+        src.intensity_fn, src.interaction_fns, scent_dimension, color_dimension,
+        item_type_count, src.lifetime);
 }
 
 /**
