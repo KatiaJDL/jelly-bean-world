@@ -666,8 +666,21 @@ public:
 	}
 
 	inline void update_patches() {
-		for(auto i = patches.begin(); patches.end(); i++) {
+		std::cout << "nb of rows " << patches.size << std::endl;
 
+		for(auto i = patches.begin(); i!=patches.end(); ++i) {
+			array_map<int64_t, patch<PerPatchData>>& row = patches.get((long int) i.position);
+			for(auto j = row.begin(); j != row.end(); ++j) {
+				if (row.contains((long int) j.position)) {
+					patch_type& p = row.get((long int) j.position);
+					int banana = 0;
+					for (int k = 0; k < p.items.length; k++) {
+						if (p.items[k].item_type==0) banana ++;
+					}
+					std::cout << "	" << j.position << " " << banana << std::endl;
+					p.fixed = !(p.fixed);
+				}
+			}
 		}
 
 

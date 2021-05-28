@@ -1,6 +1,7 @@
 import jbw
 from timeit import default_timer
 from math import pi
+from random import randint
 
 class SimpleAgent(jbw.Agent):
 	def __init__(self, simulator, load_filepath=None):
@@ -38,7 +39,7 @@ def make_config():
 						   [jbw.InteractionFunction.PIECEWISE_BOX, 200.0, 0.0, -6.0, -6.0],      # parameters for interaction between item 0 and item 1
 						   [jbw.InteractionFunction.PIECEWISE_BOX, 10.0, 200.0, 2.0, -100.0],    # parameters for interaction between item 0 and item 2
 						   [jbw.InteractionFunction.ZERO]                                        # parameters for interaction between item 0 and item 3
-						], lifetime = 10))
+						], lifetime= 10))
 	items.append(jbw.Item("onion",     [1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0, 1, 0, 0], [0, 0, 0, 0], False, 0.0,
 					   intensity_fn=jbw.IntensityFunction.CONSTANT, intensity_fn_args=[-5.0],
 					   interaction_fns=[
@@ -46,7 +47,7 @@ def make_config():
 						   [jbw.InteractionFunction.ZERO],                                       # parameters for interaction between item 1 and item 1
 						   [jbw.InteractionFunction.PIECEWISE_BOX, 200.0, 0.0, -100.0, -100.0],  # parameters for interaction between item 1 and item 2
 						   [jbw.InteractionFunction.ZERO]                                        # parameters for interaction between item 1 and item 3
-						], lifetime = 1000))
+						]))
 	items.append(jbw.Item("jellybean", [0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0, 0, 0, 0], [0, 0, 0, 0], False, 0.0,
 					   intensity_fn=jbw.IntensityFunction.CONSTANT, intensity_fn_args=[-5.3],
 					   interaction_fns=[
@@ -62,7 +63,7 @@ def make_config():
 						   [jbw.InteractionFunction.ZERO],                                       # parameters for interaction between item 3 and item 1
 						   [jbw.InteractionFunction.ZERO],                                       # parameters for interaction between item 3 and item 2
 						   [jbw.InteractionFunction.CROSS, 10.0, 15.0, 20.0, -200.0, -20.0, 1.0] # parameters for interaction between item 3 and item 3
-						], lifetime = 0))
+						]))
 
 	# construct the simulator configuration
 	return jbw.SimulatorConfig(max_steps_per_movement=1, vision_range=5,

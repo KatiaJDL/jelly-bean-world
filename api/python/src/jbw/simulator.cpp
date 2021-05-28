@@ -939,8 +939,6 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
             return NULL;
         }
 
-        std::cout << lifetime << std::endl;
-
         if (!PyList_Check(py_intensity_fn_args) || !PyList_Check(py_interaction_fn_args)) {
             PyErr_SetString(PyExc_TypeError, "'intensity_fn_args' and 'interaction_fn_args' must be lists.\n");
             return NULL;
@@ -1013,7 +1011,6 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
     }
     import_errors();
 
-    std::cout <<  "end " << config.item_types[0].lifetime << std::endl;
     return PyLong_FromVoidPtr(sim);
 }
 

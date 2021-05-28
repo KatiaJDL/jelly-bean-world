@@ -860,7 +860,7 @@ struct agent_state {
 
                 /* check if the item is too old; if so, delete it */
                 if (config.item_types[item.item_type].lifetime != 0 && current_time >= config.item_types[item.item_type].lifetime + item.creation_time) {
-                    std::cout << "remove" << std::endl;
+                    //neighborhood[i]->items[j].deletion_time = current_time;
                     neighborhood[i]->items.remove(j); j--; continue;
                 }
 
@@ -2175,6 +2175,8 @@ private:
             }
         }
 #endif
+
+        world.update_patches();
 
         /* compute new scent and vision for each agent */
         update_agent_scent_and_vision();
