@@ -656,7 +656,7 @@ public:
 		gibbs_field<map<PerPatchData, ItemType>> field(
 				cache, patch_positions, neighborhoods, num_patches_to_sample, n);
 		for (unsigned int i = 0; i < mcmc_iterations; i++) {
-			field.resample(rng, current_time); 
+			field.sample(rng, current_time); 
 		}
 	}
 

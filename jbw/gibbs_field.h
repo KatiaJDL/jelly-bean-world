@@ -48,6 +48,8 @@ struct gibbs_field_cache
 
 	const ItemType* item_types;
 	unsigned int item_type_count;
+	unsigned int* varying_item_types;
+	unsigned int varying_item_type_count;
 
 #if SAMPLING_METHOD == GIBBS_SAMPLING
 	/* the list of patch positions to visit during each Gibbs iteration;
@@ -111,6 +113,7 @@ private:
 		bottom_right_positions = NULL;
 		top_right_positions = NULL;
 #endif
+		varying_item_type_count = item_type_count;
 		intensities = (float*) malloc(sizeof(float) * item_type_count);
 		if (intensities == NULL) {
 			fprintf(stderr, "gibbs_field_cache.init_helper ERROR: Insufficient memory for intensities.\n");
@@ -133,6 +136,7 @@ private:
 
 			if (is_stationary(item_types[i].regeneration_fn.fn) && is_time_independent(item_types[i].regeneration_fn.fn)) {
 				regenerations[i] = item_types[i].regeneration_fn.fn(position(0, 0), 0, item_types[i].regeneration_fn.args);
+				varying_item_type_count --;
 			}
 
 			for (unsigned int j = 0; j < item_type_count; j++) {
@@ -158,6 +162,16 @@ private:
 				}
 			}
 		}
+
+		varying_item_types = (unsigned int*) malloc(sizeof(unsigned int) * varying_item_type_count);
+		unsigned int index = 0;
+		for (unsigned int i = 0; i < item_type_count; i++) {
+			if (!is_stationary(item_types[i].regeneration_fn.fn) || !is_time_independent(item_types[i].regeneration_fn.fn)) {
+				varying_item_types[index]=i;
+				index++;
+			}
+		}
+
 
 #if SAMPLING_METHOD == GIBBS_SAMPLING
 		unsigned int half_n = n / 2;
@@ -195,6 +209,7 @@ private:
 			if (interactions[i] != NULL) core::free(interactions[i]);
 		core::free(interactions);
 		core::free(regenerations);
+		core::free(varying_item_types);
 #if SAMPLING_METHOD == GIBBS_SAMPLING
 		if (bottom_left_positions != NULL) core::free(bottom_left_positions);
 		if (top_left_positions != NULL) core::free(top_left_positions);
@@ -282,7 +297,7 @@ public:
 	~gibbs_field() { }
 
 	template<typename RNGType>
-	void sample(RNGType& rng) {
+	void sample(RNGType& rng, uint64_t current_time = 0) {
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
 #endif
