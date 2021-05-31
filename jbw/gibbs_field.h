@@ -17,6 +17,9 @@
 #ifndef JBW_GIBBS_FIELD_H_
 #define JBW_GIBBS_FIELD_H_
 
+#include <stdio.h>
+#include <Python.h>
+
 #include <core/random.h>
 #include <math/log.h>
 #include "position.h"
@@ -404,6 +407,8 @@ public:
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
 #endif
+		/* Retrieving regeneration rate */
+
 		for (unsigned int i = 0; i < patch_count; i++) {
 			const position patch_position_offset = patch_positions[i] * n;
 			const patch_neighborhood<patch_type>& neighborhood = neighborhoods[i];

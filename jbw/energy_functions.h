@@ -23,6 +23,8 @@ namespace jbw {
 
 typedef float (*intensity_function)(const position, const float*);
 typedef float (*interaction_function)(const position, const position, const float*);
+typedef float (*regeneration_function)(const position, const uint64_t, const float*);
+
 
 typedef uint64_t intensity_fns_type;
 enum class intensity_fns : intensity_fns_type {
@@ -32,6 +34,11 @@ enum class intensity_fns : intensity_fns_type {
 typedef uint64_t interaction_fns_type;
 enum class interaction_fns : interaction_fns_type {
 	ZERO = 0, PIECEWISE_BOX, CROSS, CROSS_HASH
+};
+
+typedef uint64_t regeneration_fns_type;
+enum class regeneration_fns : regeneration_fns_type {
+	ZERO = 0, CONSTANT, CRENEL
 };
 
 float zero_intensity_fn(const position pos, const float* args) {
@@ -216,6 +223,57 @@ interaction_fns get_interaction_fn(interaction_function function) {
 	}
 }
 
+float zero_regeneration_fn(const position pos, const uint64_t time, const float* args) {
+	return 0.0;
+}
+
+float constant_regeneration_fn(const position pos, const uint64_t time, const float* args) {
+	return args[0];
+}
+
+float crenel_regeneration_fn(const position pos, const uint64_t time, const float* args) {
+	return 0;
+}
+
+regeneration_function get_regeneration_fn(regeneration_fns type, const float* args, unsigned int num_args)
+{
+	switch (type) {
+	case regeneration_fns::ZERO:
+		if (num_args != 0) {
+			fprintf(stderr, "get_regeneration_fn ERROR: A zero regeneration function requires zero arguments.");
+			return NULL;
+		}
+		return zero_regeneration_fn;
+	case regeneration_fns::CONSTANT:
+		if (num_args == 0) {
+			fprintf(stderr, "get_regeneration_fn ERROR: A constant regeneration function requires an argument.");
+			return NULL;
+		}
+		return constant_regeneration_fn;
+	case regeneration_fns::CRENEL:
+		if (num_args != 100) {
+			fprintf(stderr, "Not yet implement");
+			return NULL;
+		}
+		return crenel_regeneration_fn;
+	}
+	fprintf(stderr, "get_regeneration_fn ERROR: Unknown intensity function type.");
+	return NULL;
+}
+
+regeneration_fns get_regeneration_fn(regeneration_function function) {
+	if (function == zero_regeneration_fn) {
+		return regeneration_fns::ZERO;
+	} else if (function == constant_regeneration_fn) {
+		return regeneration_fns::CONSTANT;
+	} else if (function == crenel_regeneration_fn) {
+		return regeneration_fns::CRENEL;
+	} else {
+		fprintf(stderr, "get_regeneration_fn ERROR: Unknown regeneration_function.");
+		exit(EXIT_FAILURE);
+	}
+}
+
 template<typename Stream>
 inline bool read(intensity_function& function, Stream& in) {
 	intensity_fns_type c;
@@ -273,8 +331,39 @@ inline bool write(const interaction_function& function, Stream& out) {
 	}
 }
 
+template<typename Stream>
+inline bool read(regeneration_function& function, Stream& in) {
+	regeneration_fns_type c;
+	if (!read(c, in)) return false;
+	switch ((regeneration_fns) c) {
+	case regeneration_fns::ZERO:          function = zero_regeneration_fn; return true;
+	case regeneration_fns::CONSTANT: function = constant_regeneration_fn; return true;
+	case regeneration_fns::CRENEL:         function = crenel_regeneration_fn; return true;
+	}
+	fprintf(stderr, "read ERROR: Unrecognized regeneration function.\n");
+	return false;
+}
+
+template<typename Stream>
+inline bool write(const regeneration_function& function, Stream& out) {
+	if (function == zero_regeneration_fn) {
+		return write((regeneration_fns_type) regeneration_fns::ZERO, out);
+	} else if (function == constant_regeneration_fn) {
+		return write((regeneration_fns_type) regeneration_fns::CONSTANT, out);
+	} else if (function == crenel_regeneration_fn) {
+		return write((regeneration_fns_type) regeneration_fns::CRENEL, out);
+	} else {
+		fprintf(stderr, "write ERROR: Unrecognized regeneration function.\n");
+		return false;
+	}
+}
+
 inline bool is_constant(const interaction_function function) {
 	return function == zero_interaction_fn;
+}
+
+inline bool is_constant(const regeneration_function function) {
+	return function == zero_regeneration_fn;
 }
 
 /* NOTE: stationary intensity functions are also constant */
@@ -287,6 +376,17 @@ inline bool is_stationary(const interaction_function function) {
 	return (function == zero_interaction_fn
 		 || function == piecewise_box_interaction_fn
 		 || function == cross_interaction_fn);
+}
+
+/* NOTE: stationary regeneration functions are also constant */
+inline bool is_stationary(const regeneration_function function) {
+	return (function == zero_regeneration_fn
+		 || function == constant_regeneration_fn);
+}
+
+inline bool is_time_independent(const regeneration_function function) {
+	return (function == zero_regeneration_fn
+		 || function == constant_regeneration_fn);
 }
 
 } /* namespace jbw */

@@ -861,6 +861,8 @@ static inline void import_errors() {
  *                    functions, where the first element in each sublist is the
  *                    ID of the interaction function, and the remaining
  *                    elements are its arguments.
+ *                  - (int) The ID of the regeneration function.
+ *                  - (list of floats) The arguments to the regeneration function.
  *                  - (int) THe lifetime of the item, 0 if eternal life
  * \returns Pointer to the new simulator.
  */
@@ -931,16 +933,18 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
         unsigned int py_intensity_fn;
         PyObject* py_intensity_fn_args;
         PyObject* py_interaction_fn_args;
+        unsigned int py_regeneration_fn;
+        PyObject* py_regeneration_fn_args;
 
-        if (!PyArg_ParseTuple(next_py_item, "sOOOOOfIOO|I", &name, &py_scent, &py_color, &py_required_item_counts,
+        if (!PyArg_ParseTuple(next_py_item, "sOOOOOfIOOIOI", &name, &py_scent, &py_color, &py_required_item_counts,
           &py_required_item_costs, &blocks_movement, &visual_occlusion, &py_intensity_fn, &py_intensity_fn_args, 
-          &py_interaction_fn_args, &lifetime)) {
+          &py_interaction_fn_args, &py_regeneration_fn, &py_regeneration_fn_args, &lifetime)) {
             fprintf(stderr, "Invalid argument types for item property in call to 'simulator_c.new'.\n");
             return NULL;
         }
 
-        if (!PyList_Check(py_intensity_fn_args) || !PyList_Check(py_interaction_fn_args)) {
-            PyErr_SetString(PyExc_TypeError, "'intensity_fn_args' and 'interaction_fn_args' must be lists.\n");
+        if (!PyList_Check(py_intensity_fn_args) || !PyList_Check(py_interaction_fn_args) || !PyList_Check(py_regeneration_fn_args)) {
+            PyErr_SetString(PyExc_TypeError, "'intensity_fn_args', 'interaction_fn_args' and 'regeneration_fn_args' must be lists.\n");
             return NULL;
         }
 
@@ -985,6 +989,16 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
                 return NULL;
             }
         }
+        pair<float*, Py_ssize_t> regeneration_fn_args = PyArg_ParseFloatList(py_regeneration_fn_args);
+        new_item.regeneration_fn.fn = get_regeneration_fn((regeneration_fns) py_regeneration_fn,
+                regeneration_fn_args.key, (unsigned int) regeneration_fn_args.value);
+        if (new_item.regeneration_fn.fn == NULL) {
+            PyErr_SetString(PyExc_ValueError, "Invalid regeneration"
+                    " function arguments in the call to 'simulator_c.new'.");
+            return NULL;
+        }
+        new_item.regeneration_fn.args = regeneration_fn_args.key;
+        new_item.regeneration_fn.arg_count = (unsigned int) regeneration_fn_args.value;
         config.item_types.length += 1;
 
     }

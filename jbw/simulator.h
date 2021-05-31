@@ -175,6 +175,7 @@ struct item_properties {
 
     energy_function<intensity_function> intensity_fn;
     energy_function<interaction_function>* interaction_fns;
+    energy_function<regeneration_function> regeneration_fn;
 
     static inline void free(item_properties& properties, unsigned int item_type_count) {
         core::free(properties.name);
@@ -186,6 +187,7 @@ struct item_properties {
         for (unsigned int i = 0; i < item_type_count; i++)
             core::free(properties.interaction_fns[i]);
         core::free(properties.interaction_fns);
+        core::free(properties.regeneration_fn);
     }
 };
 
@@ -243,6 +245,7 @@ inline bool init(
         const float* scent, const float* color, const unsigned int* required_item_counts,
         const unsigned int* required_item_costs, bool blocks_movement, float visual_occlusion,
         const energy_function<intensity_function>& intensity_fn, const InteractionFunctionInfo& interaction_fns,
+        const energy_function<regeneration_function>& regeneration_fn,
         unsigned int scent_dimension, unsigned int color_dimension, unsigned int item_type_count,
         const unsigned int lifetime)
 {
@@ -276,6 +279,12 @@ inline bool init(
         core::free(properties.color); core::free(properties.required_item_counts);
         core::free(properties.required_item_costs); return false;
     }
+    if (!init(properties.regeneration_fn, regeneration_fn)) {
+        core::free(properties.name); core::free(properties.scent);
+        core::free(properties.color); core::free(properties.required_item_counts);
+        core::free(properties.required_item_costs);
+        core::free(properties.intensity_fn); return false;
+    }
     properties.interaction_fns = (energy_function<interaction_function>*)
             calloc(item_type_count, sizeof(energy_function<interaction_function>));
     if (properties.interaction_fns == NULL) {
@@ -283,12 +292,14 @@ inline bool init(
         core::free(properties.name); core::free(properties.scent);
         core::free(properties.color); core::free(properties.required_item_counts);
         core::free(properties.required_item_costs);
-        core::free(properties.intensity_fn); return false;
+        core::free(properties.intensity_fn); 
+        core::free(properties.regeneration_fn); return false;
     }
     if (!init_interaction_fns(properties.interaction_fns, interaction_fns, item_type_count)) {
         core::free(properties.name); core::free(properties.scent); core::free(properties.color);
         core::free(properties.required_item_counts); core::free(properties.required_item_costs);
-        core::free(properties.intensity_fn); core::free(properties.interaction_fns); return false;
+        core::free(properties.intensity_fn); 
+        core::free(properties.regeneration_fn); core::free(properties.interaction_fns); return false;
     }
 
     for (unsigned int i = 0; i < scent_dimension; i++)
@@ -316,8 +327,8 @@ inline bool init(
     return init(properties, src.name.data, src.name.length,
         src.scent, src.color, src.required_item_counts,
         src.required_item_costs, src.blocks_movement, src.visual_occlusion,
-        src.intensity_fn, src.interaction_fns, scent_dimension, color_dimension,
-        item_type_count, src.lifetime);
+        src.intensity_fn, src.interaction_fns, src.regeneration_fn, scent_dimension,
+        color_dimension, item_type_count, src.lifetime);
 }
 
 /**
@@ -367,6 +378,7 @@ inline bool read(item_properties& properties, Stream& in,
      || !read(properties.blocks_movement, in)
      || !read(properties.visual_occlusion, in)
      || !read(properties.intensity_fn, in)
+     || !read(properties.regeneration_fn, in)
      || !read(properties.lifetime, in))
     {
         free(properties.name); free(properties.scent); free(properties.color);
@@ -401,6 +413,7 @@ inline bool write(const item_properties& properties, Stream& out,
      || !write(properties.blocks_movement, out)
      || !write(properties.visual_occlusion, out)
      || !write(properties.intensity_fn, out)
+     || !write(properties.regeneration_fn, out)
      || !write(properties.lifetime, out))
         return false;
 
@@ -1452,8 +1465,6 @@ public:
      */
     inline status add_agent(uint64_t& new_agent_id, agent_state*& new_agent) {
         
-        test_python();
-        
         simulator_lock.lock();
         if (!agents.check_size()) {
             simulator_lock.unlock();
@@ -2206,6 +2217,8 @@ private:
     }
 
     inline void update_patches() {
+
+        /* Iterate over patches */
 		// std::cout << "nb of rows " << patches.size << std::endl;
 		for(auto i = world.patches.begin(); i!=world.patches.end(); ++i) {
 			array_map<int64_t, patch<patch_data>>& row = world.patches.values[(long int) i.position];
@@ -2218,6 +2231,7 @@ private:
 				// }
 				// std::cout << "		" << j.position << " " << banana << std::endl;
 
+                /* Iterate over the items of the patch */ 
 				for (unsigned int j = 0; j < p.items.length; j++) {
                     const item& item = p.items[j];
 					/* check if the item is too old; if so, delete it */

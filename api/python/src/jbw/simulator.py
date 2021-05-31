@@ -304,8 +304,8 @@ class Simulator(object):
                         i.intensity_fn,
                         i.intensity_fn_args,
                         i.interaction_fns,
-                        # i.regeneration_fn,
-                        # i.regeneration_fn_args,
+                        i.regeneration_fn,
+                        i.regeneration_fn_args,
                         i.lifetime
                     )
                     for i in sim_config.items

@@ -591,8 +591,10 @@ public:
 		/* construct the Gibbs field and sample the patches at positions_to_sample */
 		gibbs_field<map<PerPatchData, ItemType>> field(
 				cache, patch_positions, neighborhoods, num_patches_to_sample, n);
-		for (unsigned int i = 0; i < mcmc_iterations; i++)
-			field.sample(rng);
+		for (unsigned int i = 0; i < mcmc_iterations; i++) {
+			field.sample(rng); 
+			field.resample(rng);
+		}
 
 		/* set the core four patches to fixed */
 		i = row_index;

@@ -97,11 +97,8 @@ if __name__ == "__main__":
 		print("adding agent " + str(len(agents)))
 		try:
 			agent = SimpleAgent(sim)
-			print("agent created")
 			agents.append(agent)
-			print("agent added")
 		except jbw.AddAgentError:
-			print("not added")
 			pass
 
 		# move agents to avoid collision at (0,0)
