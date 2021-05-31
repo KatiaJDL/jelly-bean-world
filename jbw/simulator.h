@@ -2197,7 +2197,7 @@ private:
         }
 #endif
 
-        update_patches();
+        world.update_patches(time);
 
         /* compute new scent and vision for each agent */
         update_agent_scent_and_vision();
@@ -2216,46 +2216,6 @@ private:
         on_step((simulator<SimulatorData>*) this, (const hash_map<uint64_t, agent_state*>&) agents, time);
     }
 
-    inline void update_patches() {
-
-        /* Iterate over patches */
-
-        // /* get the neighborhoods of all the fixed patches */
-		// position patch_positions[world.patches.size];
-		// patch_neighborhood<patch_type> neighborhoods[world.patches.size];
-		// unsigned int num_patches_to_sample = 0;
-
-
-		// std::cout << "nb of rows " << patches.size << std::endl;
-		for(auto i = world.patches.begin(); i!=world.patches.end(); ++i) {
-			array_map<int64_t, patch<patch_data>>& row = world.patches.values[(long int) i.position];
-			// std::cout << "	nb of columns " << row.size << std::endl;			
-			for(auto j = row.begin(); j != row.end(); ++j) {
-				patch_type& p = row.values[(long int) j.position];
-				// int banana = 0;
-				// for (int k = 0; k < p.items.length; k++) {
-				// 	if (p.items[k].item_type==0) banana ++;
-				// }
-				// std::cout << "		" << j.position << " " << banana << std::endl;
-
-                /* Iterate over the items of the patch */ 
-				for (unsigned int k = 0; k < p.items.length; k++) {
-                    const item& item = p.items[k];
-					/* check if the item is too old; if so, delete it */
-					if (config.item_types[item.item_type].lifetime != 0 && time >= config.item_types[item.item_type].lifetime + item.creation_time) {
-						//neighborhood[i]->items[k].deletion_time = current_time;
-						p.items.remove(k); k--; continue;
-					}
-                }
-
-                // /* get the neighborhoods of all the fixed patches */
-                // if (!p.fixed) continue;
-				// position patch_position = position(p, world.patches.keys[i.position]);
-				// patch_positions[num_patches_to_sample] = patch_position;
-				// get_neighborhood(patch_position, i.position, j.position, neighborhoods[num_patches_to_sample++]);
-			}
-		}
-	}
 
     /* Precondition: This thread has all agent locks, which it will release. */
     inline void update_agent_scent_and_vision() {

@@ -612,6 +612,54 @@ public:
 		return index;
 	}
 
+	inline void update_patches(uint64_t current_time) {
+
+        /* Iterate over patches */
+
+        /* get the neighborhoods of all the fixed patches */
+		position patch_positions[patches.size];
+		patch_neighborhood<patch_type> neighborhoods[patches.size];
+		unsigned int num_patches_to_sample = 0;
+
+
+		// std::cout << "nb of rows " << patches.size << std::endl;
+		for(auto i = patches.begin(); i!=patches.end(); ++i) {
+			array_map<int64_t, patch<PerPatchData>>& row = patches.values[(long int) i.position];
+			// std::cout << "	nb of columns " << row.size << std::endl;			
+			for(auto j = row.begin(); j != row.end(); ++j) {
+				patch_type& p = row.values[(long int) j.position];
+				// int banana = 0;
+				// for (int k = 0; k < p.items.length; k++) {
+				// 	if (p.items[k].item_type==0) banana ++;
+				// }
+				// std::cout << "		" << j.position << " " << banana << std::endl;
+
+                /* Iterate over the items of the patch */ 
+				for (unsigned int k = 0; k < p.items.length; k++) {
+                    const item& item = p.items[k];
+					/* check if the item is too old; if so, delete it */
+					if (cache.item_types[item.item_type].lifetime != 0 && current_time >= cache.item_types[item.item_type].lifetime + item.creation_time) {
+						//neighborhood[i]->items[k].deletion_time = current_time;
+						p.items.remove(k); k--; continue;
+					}
+                }
+
+                /* get the neighborhoods of all the fixed patches */
+                if (!p.fixed) continue;
+				position patch_position = position(row.keys[j.position], patches.keys[i.position]);
+				patch_positions[num_patches_to_sample] = patch_position;
+				get_neighborhood(patch_position, i.position, j.position, neighborhoods[num_patches_to_sample++]);
+			}
+		}
+
+		/* construct the Gibbs field and resample the patches at positions_to_sample */
+		gibbs_field<map<PerPatchData, ItemType>> field(
+				cache, patch_positions, neighborhoods, num_patches_to_sample, n);
+		for (unsigned int i = 0; i < mcmc_iterations; i++) {
+			field.resample(rng, current_time); 
+		}
+	}
+
 	/**
 	 * Returns the patches in the world that intersect with a bounding box of
 	 * size n centered at `world_position`. This function will not create any
