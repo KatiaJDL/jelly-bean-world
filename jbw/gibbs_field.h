@@ -43,6 +43,7 @@ struct gibbs_field_cache
 {
 	float* intensities;
 	float** interactions;
+	float* regenerations;
 	unsigned int two_n, four_n;
 
 	const ItemType* item_types;
@@ -69,6 +70,13 @@ struct gibbs_field_cache
 		if (is_stationary(item_types[item_type].intensity_fn.fn))
 			return intensities[item_type];
 		else return item_types[item_type].intensity_fn.fn(pos, item_types[item_type].intensity_fn.args);
+	}
+
+	inline float regeneration(const position& pos, const uint64_t time, unsigned int item_type) {
+		if (is_stationary(item_types[item_type].regeneration_fn.fn) && is_time_independent(item_types[item_type].regeneration_fn.fn)) {
+			return regenerations[item_type];
+		}
+		else return item_types[item_type].regeneration_fn.fn(pos, time, item_types[item_type].regeneration_fn.args);
 	}
 
 	inline float interaction(
@@ -108,6 +116,11 @@ private:
 			fprintf(stderr, "gibbs_field_cache.init_helper ERROR: Insufficient memory for intensities.\n");
 			return false;
 		}
+		regenerations = (float*) malloc(sizeof(float) * item_type_count);
+		if (regenerations == NULL) {
+			fprintf(stderr, "gibbs_field_cache.init_helper ERROR: Insufficient memory for regenerations.\n");
+			return false;
+		}
 		interactions = (float**) calloc(item_type_count * item_type_count, sizeof(float*));
 		if (interactions == NULL) {
 			fprintf(stderr, "gibbs_field_cache.init_helper ERROR: Insufficient memory for interactions.\n");
@@ -117,6 +130,10 @@ private:
 		for (unsigned int i = 0; i < item_type_count; i++) {
 			if (is_stationary(item_types[i].intensity_fn.fn))
 				intensities[i] = item_types[i].intensity_fn.fn(position(0, 0), item_types[i].intensity_fn.args);
+
+			if (is_stationary(item_types[i].regeneration_fn.fn) && is_time_independent(item_types[i].regeneration_fn.fn)) {
+				regenerations[i] = item_types[i].regeneration_fn.fn(position(0, 0), 0, item_types[i].regeneration_fn.args);
+			}
 
 			for (unsigned int j = 0; j < item_type_count; j++) {
 				interaction_function interaction = item_types[i].interaction_fns[j].fn;
@@ -177,6 +194,7 @@ private:
 		for (unsigned int i = 0; i < item_type_count * item_type_count; i++)
 			if (interactions[i] != NULL) core::free(interactions[i]);
 		core::free(interactions);
+		core::free(regenerations);
 #if SAMPLING_METHOD == GIBBS_SAMPLING
 		if (bottom_left_positions != NULL) core::free(bottom_left_positions);
 		if (top_left_positions != NULL) core::free(top_left_positions);
@@ -403,7 +421,7 @@ public:
 	}
 
 	template<typename RNGType>
-	void resample(RNGType& rng) {
+	void resample(RNGType& rng, uint64_t current_time) {
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
 #endif
@@ -417,13 +435,11 @@ public:
 
 			/* New intensity function */
 			float real_intensity = log(current.items.length) - LOG_N_SQUARED;
-			float r = 0; //regeneration rate
+			float r = 0; //regeneration rate with the cache
 			float new_intensity = log(1+r) + real_intensity;
 
-
-			/* Propose un new distribution */
-
-			/* Accept or not */
+			/* Backup */
+			// sample(rng);
 		}
 	}
 

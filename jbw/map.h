@@ -593,7 +593,6 @@ public:
 				cache, patch_positions, neighborhoods, num_patches_to_sample, n);
 		for (unsigned int i = 0; i < mcmc_iterations; i++) {
 			field.sample(rng); 
-			field.resample(rng);
 		}
 
 		/* set the core four patches to fixed */

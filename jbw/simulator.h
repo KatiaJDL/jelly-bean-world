@@ -2219,6 +2219,13 @@ private:
     inline void update_patches() {
 
         /* Iterate over patches */
+
+        // /* get the neighborhoods of all the fixed patches */
+		// position patch_positions[world.patches.size];
+		// patch_neighborhood<patch_type> neighborhoods[world.patches.size];
+		// unsigned int num_patches_to_sample = 0;
+
+
 		// std::cout << "nb of rows " << patches.size << std::endl;
 		for(auto i = world.patches.begin(); i!=world.patches.end(); ++i) {
 			array_map<int64_t, patch<patch_data>>& row = world.patches.values[(long int) i.position];
@@ -2232,14 +2239,20 @@ private:
 				// std::cout << "		" << j.position << " " << banana << std::endl;
 
                 /* Iterate over the items of the patch */ 
-				for (unsigned int j = 0; j < p.items.length; j++) {
-                    const item& item = p.items[j];
+				for (unsigned int k = 0; k < p.items.length; k++) {
+                    const item& item = p.items[k];
 					/* check if the item is too old; if so, delete it */
 					if (config.item_types[item.item_type].lifetime != 0 && time >= config.item_types[item.item_type].lifetime + item.creation_time) {
-						//neighborhood[i]->items[j].deletion_time = current_time;
-						p.items.remove(j); j--; continue;
+						//neighborhood[i]->items[k].deletion_time = current_time;
+						p.items.remove(k); k--; continue;
 					}
-				}
+                }
+
+                // /* get the neighborhoods of all the fixed patches */
+                // if (!p.fixed) continue;
+				// position patch_position = position(p, world.patches.keys[i.position]);
+				// patch_positions[num_patches_to_sample] = patch_position;
+				// get_neighborhood(patch_position, i.position, j.position, neighborhoods[num_patches_to_sample++]);
 			}
 		}
 	}
