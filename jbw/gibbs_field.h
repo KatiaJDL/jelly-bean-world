@@ -404,12 +404,22 @@ public:
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
 #endif
+		for (unsigned int i = 0; i < patch_count; i++) {
+			const position patch_position_offset = patch_positions[i] * n;
+			const patch_neighborhood<patch_type>& neighborhood = neighborhoods[i];
 
-		//patch_type& current = *neighborhood.top_left_neighborhood[0];
-		//float real_intensity = current.items.length / n;
-		/* Propose un new distribution */
+			patch_type& current = *neighborhood.top_left_neighborhood[0];
 
-		/* Accept or not */
+			/* New intensity function */
+			float real_intensity = log(current.items.length) - LOG_N_SQUARED;
+			float r = 0; //regeneration rate
+			float new_intensity = log(1+r) + real_intensity;
+
+
+			/* Propose un new distribution */
+
+			/* Accept or not */
+		}
 	}
 
 private:

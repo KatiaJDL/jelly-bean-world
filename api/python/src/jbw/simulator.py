@@ -395,6 +395,7 @@ class Simulator(object):
                     default_client_permissions,
                 )
 
+
     def __del__(self):
         """Deletes this simulator and deallocates all
         associated memory. This simulator cannot be used

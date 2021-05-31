@@ -21,6 +21,9 @@
 
 #include <iostream>
 
+#include <stdio.h>
+#include <Python.h>
+
 #include <core/array.h>
 #include <core/utility.h>
 #include <atomic>
@@ -858,12 +861,6 @@ struct agent_state {
                     neighborhood[i]->items.remove(j); j--; continue;
                 }
 
-                /* check if the item is too old; if so, delete it */
-                if (config.item_types[item.item_type].lifetime != 0 && current_time >= config.item_types[item.item_type].lifetime + item.creation_time) {
-                    //neighborhood[i]->items[j].deletion_time = current_time;
-                    neighborhood[i]->items.remove(j); j--; continue;
-                }
-
                 compute_scent_contribution(scent_model, item, current_position, current_time, config, current_scent);
 
                 /* if the item is in the visual field, add its color to the appropriate pixel */
@@ -1421,6 +1418,16 @@ public:
         }
     }
 
+    inline int test_python() {
+
+	    Py_Initialize();
+
+	    PyRun_SimpleString("print('Hello World from Embedded Python!!!')");
+
+        return 0;
+
+    }
+
     /**
      * Constructs a new simulator with the given simulator_config `conf` and
      * SimulatorData `data`, calling the copy constructor for `data`.
@@ -1444,6 +1451,9 @@ public:
      * to its state.
      */
     inline status add_agent(uint64_t& new_agent_id, agent_state*& new_agent) {
+        
+        test_python();
+        
         simulator_lock.lock();
         if (!agents.check_size()) {
             simulator_lock.unlock();
@@ -2176,7 +2186,7 @@ private:
         }
 #endif
 
-        world.update_patches();
+        update_patches();
 
         /* compute new scent and vision for each agent */
         update_agent_scent_and_vision();
@@ -2194,6 +2204,31 @@ private:
         /* Invoke the step callback function for each agent. */
         on_step((simulator<SimulatorData>*) this, (const hash_map<uint64_t, agent_state*>&) agents, time);
     }
+
+    inline void update_patches() {
+		// std::cout << "nb of rows " << patches.size << std::endl;
+		for(auto i = world.patches.begin(); i!=world.patches.end(); ++i) {
+			array_map<int64_t, patch<patch_data>>& row = world.patches.values[(long int) i.position];
+			// std::cout << "	nb of columns " << row.size << std::endl;			
+			for(auto j = row.begin(); j != row.end(); ++j) {
+				patch_type& p = row.values[(long int) j.position];
+				// int banana = 0;
+				// for (int k = 0; k < p.items.length; k++) {
+				// 	if (p.items[k].item_type==0) banana ++;
+				// }
+				// std::cout << "		" << j.position << " " << banana << std::endl;
+
+				for (unsigned int j = 0; j < p.items.length; j++) {
+                    const item& item = p.items[j];
+					/* check if the item is too old; if so, delete it */
+					if (config.item_types[item.item_type].lifetime != 0 && time >= config.item_types[item.item_type].lifetime + item.creation_time) {
+						//neighborhood[i]->items[j].deletion_time = current_time;
+						p.items.remove(j); j--; continue;
+					}
+				}
+			}
+		}
+	}
 
     /* Precondition: This thread has all agent locks, which it will release. */
     inline void update_agent_scent_and_vision() {
