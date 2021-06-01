@@ -136,6 +136,9 @@ private:
 
 			if (is_stationary(item_types[i].regeneration_fn.fn) && is_time_independent(item_types[i].regeneration_fn.fn)) {
 				regenerations[i] = item_types[i].regeneration_fn.fn(position(0, 0), 0, item_types[i].regeneration_fn.args);
+			}
+
+			if (is_constant(item_types[i].regeneration_fn.fn)) {
 				varying_item_type_count --;
 			}
 
@@ -166,7 +169,7 @@ private:
 		varying_item_types = (unsigned int*) malloc(sizeof(unsigned int) * varying_item_type_count);
 		unsigned int index = 0;
 		for (unsigned int i = 0; i < item_type_count; i++) {
-			if (!is_stationary(item_types[i].regeneration_fn.fn) || !is_time_independent(item_types[i].regeneration_fn.fn)) {
+			if (!is_constant(item_types[i].regeneration_fn.fn)) {
 				varying_item_types[index]=i;
 				index++;
 			}
@@ -449,29 +452,6 @@ public:
 				}
 			}
 #endif /* SAMPLING_METHOD == MH_SAMPLING */
-		}
-	}
-
-	template<typename RNGType>
-	void resample(RNGType& rng, uint64_t current_time) {
-#if SAMPLING_METHOD == MH_SAMPLING
-		log_cache<float>& logarithm = log_cache<float>::instance();
-#endif
-		/* Retrieving regeneration rate */
-
-		for (unsigned int i = 0; i < patch_count; i++) {
-			const position patch_position_offset = patch_positions[i] * n;
-			const patch_neighborhood<patch_type>& neighborhood = neighborhoods[i];
-
-			patch_type& current = *neighborhood.top_left_neighborhood[0];
-
-			/* New intensity function */
-			float real_intensity = log(current.items.length) - LOG_N_SQUARED;
-			float r = 0; //regeneration rate with the cache
-			float new_intensity = log(1+r) + real_intensity;
-
-			/* Backup */
-			// sample(rng);
 		}
 	}
 

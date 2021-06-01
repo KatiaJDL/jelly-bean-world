@@ -39,7 +39,9 @@ def make_config():
 						   [jbw.InteractionFunction.PIECEWISE_BOX, 200.0, 0.0, -6.0, -6.0],      # parameters for interaction between item 0 and item 1
 						   [jbw.InteractionFunction.PIECEWISE_BOX, 10.0, 200.0, 2.0, -100.0],    # parameters for interaction between item 0 and item 2
 						   [jbw.InteractionFunction.ZERO]                                        # parameters for interaction between item 0 and item 3
-						], lifetime= 10))
+						], 
+						regeneration_fn=jbw.IntensityFunction.CONSTANT, regeneration_fn_args=[10], 
+						lifetime= 10))
 	items.append(jbw.Item("onion",     [1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0, 1, 0, 0], [0, 0, 0, 0], False, 0.0,
 					   intensity_fn=jbw.IntensityFunction.CONSTANT, intensity_fn_args=[-5.0],
 					   interaction_fns=[

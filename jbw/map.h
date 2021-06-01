@@ -639,12 +639,14 @@ public:
 					/* check if the item is too old; if so, delete it */
 					if (cache.item_types[item.item_type].lifetime != 0 && current_time >= cache.item_types[item.item_type].lifetime + item.creation_time) {
 						//neighborhood[i]->items[k].deletion_time = current_time;
-						p.items.remove(k); k--; continue;
+						if (((float) std::rand())/RAND_MAX < 0.1) {
+							p.items.remove(k); k--; continue;
+						}
 					}
                 }
 
                 /* get the neighborhoods of all the fixed patches */
-                if (!p.fixed) continue;
+                //if (!p.fixed) continue;
 				position patch_position = position(row.keys[j.position], patches.keys[i.position]);
 				patch_positions[num_patches_to_sample] = patch_position;
 				get_neighborhood(patch_position, i.position, j.position, neighborhoods[num_patches_to_sample++]);
@@ -653,7 +655,7 @@ public:
 			/* construct the Gibbs field and resample the patches at positions_to_sample */
 			gibbs_field<map<PerPatchData, ItemType>> field(
 				cache, patch_positions, neighborhoods, num_patches_to_sample, n);
-			for (unsigned int i = 0; i < mcmc_iterations%10; i++) {
+			for (unsigned int i = 0; i < mcmc_iterations; i++) {
 				field.sample(rng, current_time); 
 			}
 		}
