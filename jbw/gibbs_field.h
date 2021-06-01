@@ -326,7 +326,15 @@ public:
 			patch_type& current = *neighborhood.top_left_neighborhood[0];
 			if (rng() % 2 == 0) {
 				/* propose creating a new item */
-				const unsigned int item_type = rng() % cache.item_type_count;
+				unsigned int item_type;
+				if (current_time==0) {
+					item_type = rng() % cache.item_type_count;
+				}
+				else if (cache.varying_item_type_count > 0) {
+					unsigned int choice = rng() % cache.varying_item_type_count;
+					item_type = cache.varying_item_types[choice];
+				}
+				else break;
 				position new_position = patch_position_offset + position(rng() % n, rng() % n);
 
 				patch_type* const* new_neighborhood;
@@ -364,7 +372,15 @@ public:
 					if (new_position_occupied) break;
 				}
 				if (!new_position_occupied) {
-					log_acceptance_probability += cache.intensity(new_position, item_type);
+					if (current_time == 0) {
+						log_acceptance_probability += cache.intensity(new_position, item_type);
+					}
+					else {
+						/* New intensity function */
+						float real_intensity = log(current.items.length) - LOG_N_SQUARED;
+						float r = cache.regeneration(new_position, current_time, item_type);
+						log_acceptance_probability += log(1+r) + real_intensity;
+					}
 
 					/* add log probability of inverse proposal */
 					logarithm.ensure_size((unsigned int) current.items.length + 2);
@@ -381,7 +397,8 @@ public:
 					}
 				}
 
-			} else if (current.items.length > 0) {
+			// } else if (current.items.length > 0) {
+			} else if (current.items.length > 0 && current_time==0) {
 				/* propose deleting an item */
 				unsigned int item_index = rng() % current.items.length;
 				const unsigned int old_item_type = current.items[item_index].item_type;
