@@ -230,6 +230,8 @@ struct map
 	unsigned int n;
 	unsigned int mcmc_iterations;
 
+	size_t nb_patches;
+
 	std::minstd_rand rng;
 	uint_fast32_t initial_seed;
 	gibbs_field_cache<ItemType> cache;
@@ -239,7 +241,7 @@ struct map
 
 public:
 	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count, uint_fast32_t seed) :
-		patches(32), n(n), mcmc_iterations(mcmc_iterations), rng(seed), initial_seed(seed), cache(item_types, item_type_count, n)
+		patches(32), n(n), mcmc_iterations(mcmc_iterations), rng(seed), initial_seed(seed), cache(item_types, item_type_count, n), nb_patches(0)
 	{ }
 
 	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count) :
@@ -535,6 +537,7 @@ public:
 		if (first) {
 			/* our `init_patch` function assumes the map isn't empty, so if it is, create an empty patch */
 			patches.values[row_index].keys[0] = start_x[0];
+			nb_patches++;
 			init(patches.values[row_index].values[0]);
 			patches.values[row_index].size++;
 		}
@@ -615,15 +618,15 @@ public:
 	inline void update_patches(uint64_t current_time) {
 
         /* Iterate over patches */
+		/* get the neighborhoods of all the patches */
+			position* patch_positions = new position[nb_patches];
+			patch_neighborhood<patch_type>* neighborhoods = new patch_neighborhood<patch_type>[nb_patches];
+			unsigned int num_patches_to_sample = 0;
 
 		// std::cout << "nb of rows " << patches.size << std::endl;
 		for(auto i = patches.begin(); i!=patches.end(); ++i) {
 			array_map<int64_t, patch<PerPatchData>>& row = patches.values[(long int) i.position];
 			
-			/* get the neighborhoods of all the fixed patches */
-			position* patch_positions = new position[row.size];
-			patch_neighborhood<patch_type>* neighborhoods = new patch_neighborhood<patch_type>[row.size];
-			unsigned int num_patches_to_sample = 0;
 			// std::cout << "	nb of columns " << row.size << std::endl;			
 			for(auto j = row.begin(); j != row.end(); ++j) {
 				patch_type& p = row.values[(long int) j.position];
@@ -651,13 +654,13 @@ public:
 				patch_positions[num_patches_to_sample] = patch_position;
 				get_neighborhood(patch_position, i.position, j.position, neighborhoods[num_patches_to_sample++]);
 			}
+		}
 
-			/* construct the Gibbs field and resample the patches at positions_to_sample */
-			gibbs_field<map<PerPatchData, ItemType>> field(
-				cache, patch_positions, neighborhoods, num_patches_to_sample, n);
-			for (unsigned int i = 0; i < mcmc_iterations; i++) {
+		/* construct the Gibbs field and resample the patches at positions_to_sample */
+		gibbs_field<map<PerPatchData, ItemType>> field(
+			cache, patch_positions, neighborhoods, num_patches_to_sample, n);
+		for (unsigned int i = 0; i < mcmc_iterations; i++) {
 				field.sample(rng, current_time); 
-			}
 		}
 	}
 
@@ -750,6 +753,7 @@ private:
 			/* there are no patches so initialize an empty patch */
 			if (!init(p)) return false;
 		}
+		nb_patches ++;
 		return true;
 	}
 
@@ -887,6 +891,7 @@ inline bool init(map<PerPatchData, ItemType>& world, unsigned int n,
 	world.n = n;
 	world.mcmc_iterations = mcmc_iterations;
 	world.initial_seed = seed;
+	world.nb_patches = 0;
 	if (!init(world.cache, item_types, item_type_count, n)) {
 		free(world.patches);
 		return false;
