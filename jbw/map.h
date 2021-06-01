@@ -616,15 +616,14 @@ public:
 
         /* Iterate over patches */
 
-        /* get the neighborhoods of all the fixed patches */
-		position patch_positions[patches.size];
-		patch_neighborhood<patch_type> neighborhoods[patches.size];
-		unsigned int num_patches_to_sample = 0;
-
-
 		// std::cout << "nb of rows " << patches.size << std::endl;
 		for(auto i = patches.begin(); i!=patches.end(); ++i) {
 			array_map<int64_t, patch<PerPatchData>>& row = patches.values[(long int) i.position];
+			
+			/* get the neighborhoods of all the fixed patches */
+			position* patch_positions = new position[row.size];
+			patch_neighborhood<patch_type>* neighborhoods = new patch_neighborhood<patch_type>[row.size];
+			unsigned int num_patches_to_sample = 0;
 			// std::cout << "	nb of columns " << row.size << std::endl;			
 			for(auto j = row.begin(); j != row.end(); ++j) {
 				patch_type& p = row.values[(long int) j.position];
@@ -650,13 +649,13 @@ public:
 				patch_positions[num_patches_to_sample] = patch_position;
 				get_neighborhood(patch_position, i.position, j.position, neighborhoods[num_patches_to_sample++]);
 			}
-		}
 
-		/* construct the Gibbs field and resample the patches at positions_to_sample */
-		gibbs_field<map<PerPatchData, ItemType>> field(
+			/* construct the Gibbs field and resample the patches at positions_to_sample */
+			gibbs_field<map<PerPatchData, ItemType>> field(
 				cache, patch_positions, neighborhoods, num_patches_to_sample, n);
-		for (unsigned int i = 0; i < mcmc_iterations; i++) {
-			field.sample(rng, current_time); 
+			for (unsigned int i = 0; i < mcmc_iterations%10; i++) {
+				field.sample(rng, current_time); 
+			}
 		}
 	}
 
