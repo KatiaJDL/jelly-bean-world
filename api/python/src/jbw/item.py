@@ -27,11 +27,11 @@ class RegenerationFunction(Enum):
   """A function that outputs a constant: f_i(x, t) = c. The arguments for this
   function should be a list of size 1 containing the constant: [c]."""
 
-  CRENEL = 3
-  """This function represents the climat dynamics described in the paper  
-  A synthesis of the theories and concepts of early human evolution, Mark A. Maslin,
-  Susanne Shultz and Martin H. Trauth Published:05 March 2015
-  https://doi.org/10.1098/rstb.2014.0064 
+  CUSTOM = 3
+  """A function constructed as an array. The arguments for this function should be
+  a list of values corresponding to the values of the function at each timestep*update_frequency
+  (defined in the configuration of the simulator).
+  At the end of the array the evaluation starts from the beginning.
   
   It's a temporal non-stationary function."""
 

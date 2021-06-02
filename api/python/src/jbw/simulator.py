@@ -74,6 +74,7 @@ class SimulatorConfig(object):
         diffusion_param,
         deleted_item_lifetime,
         seed=0,
+        update_frequency=5
     ):
         """Creates a new simulator configuration.
 
@@ -111,9 +112,11 @@ class SimulatorConfig(object):
                                        after they have been removed from the world.
           seed:                        The initial seed for the pseudorandom number
                                        generator.
+          update_frequency:            At which frequency to update the patches
         """
         assert len(items) > 0, "A non-empty list of items must be provided."
         self.max_steps_per_movement = max_steps_per_movement
+        self.update_frequency = update_frequency
         self.allowed_movement_directions = allowed_movement_directions
         self.allowed_turn_directions = allowed_turn_directions
         self.no_op_allowed = no_op_allowed
@@ -316,6 +319,7 @@ class Simulator(object):
                 sim_config.decay_param,
                 sim_config.diffusion_param,
                 sim_config.deleted_item_lifetime,
+                sim_config.update_frequency,
                 self._step_callback,
             )
             if is_server:

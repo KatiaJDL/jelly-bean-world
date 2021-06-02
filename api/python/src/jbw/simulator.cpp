@@ -878,12 +878,13 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
     unsigned int collision_policy;
     PyObject* py_callback;
     if (!PyArg_ParseTuple(
-      args, "IIOOOIIIIIOOIfffIO", &seed, &config.max_steps_per_movement,
+      args, "IIOOOIIIIIOOIfffIIO", &seed, &config.max_steps_per_movement,
       &py_allowed_movement_directions, &py_allowed_turn_directions, &py_no_op_allowed,
       &config.scent_dimension, &config.color_dimension, &config.vision_range,
       &config.patch_size, &config.mcmc_iterations, &py_items, &py_agent_color,
       &collision_policy, &config.agent_field_of_view, &config.decay_param,
-      &config.diffusion_param, &config.deleted_item_lifetime, &py_callback)) {
+      &config.diffusion_param, &config.deleted_item_lifetime, 
+      &config.update_frequency, &py_callback)) {
         fprintf(stderr, "Invalid argument types in the call to 'simulator_c.new'.\n");
         return NULL;
     }

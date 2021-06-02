@@ -33,12 +33,12 @@ enum class intensity_fns : intensity_fns_type {
 
 typedef uint64_t interaction_fns_type;
 enum class interaction_fns : interaction_fns_type {
-	ZERO = 0, PIECEWISE_BOX, CROSS, CROSS_HASH
+	ZERO = 0, PIECEWISE_BOX, CROSS, CROSS_HASH, MOORE
 };
 
 typedef uint64_t regeneration_fns_type;
 enum class regeneration_fns : regeneration_fns_type {
-	ZERO = 0, CONSTANT, CRENEL
+	ZERO = 0, CONSTANT, CUSTOM
 };
 
 float zero_intensity_fn(const position pos, const float* args) {
@@ -176,6 +176,13 @@ float cross_hash_interaction_fn(const position pos1, const position pos2, const 
 	}
 }
 
+float moore_interaction_fn(const position pos1, const position pos2, const float* args) {
+	const position diff = pos1 - pos2;
+	if (diff.x == 1 || diff.y == 1)
+		return 10;
+	else return 0.0f;
+}
+
 interaction_function get_interaction_fn(interaction_fns type, const float* args, unsigned int num_args)
 {
 	switch (type) {
@@ -203,6 +210,12 @@ interaction_function get_interaction_fn(interaction_fns type, const float* args,
 			return NULL;
 		}
 		return cross_hash_interaction_fn;
+	case interaction_fns::MOORE:
+		if (num_args != 0) {
+			fprintf(stderr, "get_interaction_fn ERROR: A moore interaction function requires zero arguments.");
+			return NULL;
+		}
+		return moore_interaction_fn;	
 	}
 	fprintf(stderr, "get_interaction_fn ERROR: Unknown interaction function type.");
 	return NULL;
@@ -217,6 +230,8 @@ interaction_fns get_interaction_fn(interaction_function function) {
 		return interaction_fns::CROSS;
 	} else if (function == cross_hash_interaction_fn) {
 		return interaction_fns::CROSS_HASH;
+	} else if (function == moore_interaction_fn) {
+		return interaction_fns::MOORE;
 	} else {
 		fprintf(stderr, "get_interaction_fn ERROR: Unknown interaction_function.");
 		exit(EXIT_FAILURE);
@@ -231,8 +246,8 @@ float constant_regeneration_fn(const position pos, const uint64_t time, const fl
 	return args[0];
 }
 
-float crenel_regeneration_fn(const position pos, const uint64_t time, const float* args) {
-	return 0;
+float custom_regeneration_fn(const position pos, const uint64_t time, const float* args) {
+	return args[time];
 }
 
 regeneration_function get_regeneration_fn(regeneration_fns type, const float* args, unsigned int num_args)
@@ -250,12 +265,12 @@ regeneration_function get_regeneration_fn(regeneration_fns type, const float* ar
 			return NULL;
 		}
 		return constant_regeneration_fn;
-	case regeneration_fns::CRENEL:
-		if (num_args != 100) {
-			fprintf(stderr, "Not yet implement");
+	case regeneration_fns::CUSTOM:
+		if (num_args == 0) {
+			fprintf(stderr, "get_regeneration_fn ERROR: A custom regeneration function requires at least an argument.");
 			return NULL;
 		}
-		return crenel_regeneration_fn;
+		return custom_regeneration_fn;
 	}
 	fprintf(stderr, "get_regeneration_fn ERROR: Unknown intensity function type.");
 	return NULL;
@@ -266,8 +281,8 @@ regeneration_fns get_regeneration_fn(regeneration_function function) {
 		return regeneration_fns::ZERO;
 	} else if (function == constant_regeneration_fn) {
 		return regeneration_fns::CONSTANT;
-	} else if (function == crenel_regeneration_fn) {
-		return regeneration_fns::CRENEL;
+	} else if (function == custom_regeneration_fn) {
+		return regeneration_fns::CUSTOM;
 	} else {
 		fprintf(stderr, "get_regeneration_fn ERROR: Unknown regeneration_function.");
 		exit(EXIT_FAILURE);
@@ -310,6 +325,7 @@ inline bool read(interaction_function& function, Stream& in) {
 	case interaction_fns::PIECEWISE_BOX: function = piecewise_box_interaction_fn; return true;
 	case interaction_fns::CROSS:         function = cross_interaction_fn; return true;
 	case interaction_fns::CROSS_HASH:    function = cross_hash_interaction_fn; return true;
+	case interaction_fns::MOORE:    function = moore_interaction_fn; return true;
 	}
 	fprintf(stderr, "read ERROR: Unrecognized interaction function.\n");
 	return false;
@@ -325,6 +341,8 @@ inline bool write(const interaction_function& function, Stream& out) {
 		return write((interaction_fns_type) interaction_fns::CROSS, out);
 	} else if (function == cross_hash_interaction_fn) {
 		return write((interaction_fns_type) interaction_fns::CROSS_HASH, out);
+	} else if (function == moore_interaction_fn) {
+		return write((interaction_fns_type) interaction_fns::MOORE, out);
 	} else {
 		fprintf(stderr, "write ERROR: Unrecognized interaction function.\n");
 		return false;
@@ -338,7 +356,7 @@ inline bool read(regeneration_function& function, Stream& in) {
 	switch ((regeneration_fns) c) {
 	case regeneration_fns::ZERO:          function = zero_regeneration_fn; return true;
 	case regeneration_fns::CONSTANT: function = constant_regeneration_fn; return true;
-	case regeneration_fns::CRENEL:         function = crenel_regeneration_fn; return true;
+	case regeneration_fns::CUSTOM:         function = custom_regeneration_fn; return true;
 	}
 	fprintf(stderr, "read ERROR: Unrecognized regeneration function.\n");
 	return false;
@@ -350,8 +368,8 @@ inline bool write(const regeneration_function& function, Stream& out) {
 		return write((regeneration_fns_type) regeneration_fns::ZERO, out);
 	} else if (function == constant_regeneration_fn) {
 		return write((regeneration_fns_type) regeneration_fns::CONSTANT, out);
-	} else if (function == crenel_regeneration_fn) {
-		return write((regeneration_fns_type) regeneration_fns::CRENEL, out);
+	} else if (function == custom_regeneration_fn) {
+		return write((regeneration_fns_type) regeneration_fns::CUSTOM, out);
 	} else {
 		fprintf(stderr, "write ERROR: Unrecognized regeneration function.\n");
 		return false;
@@ -375,7 +393,8 @@ inline bool is_stationary(const intensity_function function) {
 inline bool is_stationary(const interaction_function function) {
 	return (function == zero_interaction_fn
 		 || function == piecewise_box_interaction_fn
-		 || function == cross_interaction_fn);
+		 || function == cross_interaction_fn)
+		 || function == moore_interaction_fn;
 }
 
 /* NOTE: stationary regeneration functions are also constant */
@@ -387,6 +406,10 @@ inline bool is_stationary(const regeneration_function function) {
 inline bool is_time_independent(const regeneration_function function) {
 	return (function == zero_regeneration_fn
 		 || function == constant_regeneration_fn);
+}
+
+inline bool is_custom(const regeneration_function function) {
+	return (function == custom_regeneration_fn);
 }
 
 } /* namespace jbw */

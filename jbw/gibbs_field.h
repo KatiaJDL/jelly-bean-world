@@ -51,6 +51,8 @@ struct gibbs_field_cache
 	unsigned int* varying_item_types;
 	unsigned int varying_item_type_count;
 
+	unsigned int update_frequency;
+
 #if SAMPLING_METHOD == GIBBS_SAMPLING
 	/* the list of patch positions to visit during each Gibbs iteration;
 	   this will be shuffled at the beginning of each iteration */
@@ -60,8 +62,8 @@ struct gibbs_field_cache
 	position* top_right_positions;
 #endif
 
-	gibbs_field_cache(const ItemType* item_types, unsigned int item_type_count, unsigned int n) :
-		two_n(2*n), four_n(4*n), item_types(item_types), item_type_count(item_type_count)
+	gibbs_field_cache(const ItemType* item_types, unsigned int item_type_count, unsigned int n, unsigned int update_frequency) :
+		two_n(2*n), four_n(4*n), item_types(item_types), item_type_count(item_type_count), update_frequency(update_frequency)
 	{
 		if (!init_helper(n)) exit(EXIT_FAILURE);
 	}
@@ -77,6 +79,9 @@ struct gibbs_field_cache
 	inline float regeneration(const position& pos, const uint64_t time, unsigned int item_type) {
 		if (is_stationary(item_types[item_type].regeneration_fn.fn) && is_time_independent(item_types[item_type].regeneration_fn.fn)) {
 			return regenerations[item_type];
+		}
+		else if (is_custom(item_types[item_type].regeneration_fn.fn)) {
+			return item_types[item_type].regeneration_fn.fn(pos, time%item_types[item_type].regeneration_fn.arg_count, item_types[item_type].regeneration_fn.args);
 		}
 		else return item_types[item_type].regeneration_fn.fn(pos, time, item_types[item_type].regeneration_fn.args);
 	}
@@ -381,7 +386,7 @@ public:
 					else {
 						/* New intensity function */
 						float real_intensity = log(current.items.length) - LOG_N_SQUARED;
-						float r = cache.regeneration(new_position, current_time, item_type);
+						float r = cache.regeneration(new_position, current_time%cache.update_frequency, item_type);
 						log_acceptance_probability += log(1+r) + real_intensity;
 					}
 

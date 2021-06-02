@@ -240,12 +240,12 @@ struct map
 	typedef ItemType item_type;
 
 public:
-	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count, uint_fast32_t seed) :
-		patches(32), n(n), mcmc_iterations(mcmc_iterations), rng(seed), initial_seed(seed), cache(item_types, item_type_count, n), nb_patches(0)
+	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count, unsigned int update_frequency, uint_fast32_t seed) :
+		patches(32), n(n), mcmc_iterations(mcmc_iterations), rng(seed), initial_seed(seed), cache(item_types, item_type_count, n, update_frequency), nb_patches(0)
 	{ }
 
-	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count) :
-		map(n, mcmc_iterations, item_types, item_type_count,
+	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count, unsigned int update_frequency) :
+		map(n, mcmc_iterations, item_types, item_type_count, update_frequency,
 #if !defined(NDEBUG)
 			0) { }
 #else

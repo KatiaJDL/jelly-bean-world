@@ -468,6 +468,7 @@ struct simulator_config {
     array<item_properties> item_types;
     float* agent_color;
     movement_conflict_policy collision_policy;
+    unsigned int update_frequency;
 
     /* parameters for scent diffusion */
     float decay_param, diffusion_param;
@@ -501,7 +502,8 @@ struct simulator_config {
         core::swap(first.decay_param, second.decay_param);
         core::swap(first.diffusion_param, second.diffusion_param);
         core::swap(first.deleted_item_lifetime, second.deleted_item_lifetime);
-    }
+        core::swap(first.update_frequency, second.update_frequency);
+   }
 
     static inline void free(simulator_config& config) {
         config.free_helper();
@@ -545,6 +547,7 @@ private:
         decay_param = src.decay_param;
         diffusion_param = src.diffusion_param;
         deleted_item_lifetime = src.deleted_item_lifetime;
+        update_frequency = src.update_frequency;
         return true;
     }
 
@@ -595,7 +598,8 @@ bool read(simulator_config& config, Stream& in) {
      || !read(config.no_op_allowed, in)
      || !read(config.patch_size, in)
      || !read(config.mcmc_iterations, in)
-     || !read(config.item_types.length, in))
+     || !read(config.item_types.length, in)
+     || !read(config.update_frequency, in))
         return false;
 
     config.item_types.data = (item_properties*) malloc(max((size_t) 1, sizeof(item_properties) * config.item_types.length));
@@ -647,7 +651,8 @@ bool write(const simulator_config& config, Stream& out) {
         && write(config.collision_policy, out)
         && write(config.decay_param, out)
         && write(config.diffusion_param, out)
-        && write(config.deleted_item_lifetime, out);
+        && write(config.deleted_item_lifetime, out)
+        && write(config.update_frequency, out);
 }
 
 /**
@@ -1420,7 +1425,7 @@ public:
         world(config.patch_size,
             config.mcmc_iterations,
             config.item_types.data,
-            (unsigned int) config.item_types.length, seed),
+            (unsigned int) config.item_types.length, config.update_frequency, seed),
         agents(32), semaphores(8), id_counter(1), requested_moves(32, alloc_position_keys),
         acted_agent_count(0), active_agent_count(0), data(data), time(0)
     {
@@ -2197,8 +2202,7 @@ private:
         }
 #endif
 
-        unsigned int UPDATE_FREQUENCY = 5;
-        if (time%UPDATE_FREQUENCY==0)
+        if (time%config.update_frequency==0)
             world.update_patches(time);
 
         /* compute new scent and vision for each agent */
