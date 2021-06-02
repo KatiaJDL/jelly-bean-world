@@ -884,7 +884,8 @@ private:
 template<typename PerPatchData, typename ItemType>
 inline bool init(map<PerPatchData, ItemType>& world, unsigned int n,
 		unsigned int mcmc_iterations, const ItemType* item_types,
-		unsigned int item_type_count, uint_fast32_t seed)
+		unsigned int item_type_count, unsigned int update_frequency,
+		uint_fast32_t seed)
 {
 	if (!array_map_init(world.patches, 32))
 		return false;
@@ -892,7 +893,7 @@ inline bool init(map<PerPatchData, ItemType>& world, unsigned int n,
 	world.mcmc_iterations = mcmc_iterations;
 	world.initial_seed = seed;
 	world.nb_patches = 0;
-	if (!init(world.cache, item_types, item_type_count, n)) {
+	if (!init(world.cache, item_types, item_type_count, n, update_frequency)) {
 		free(world.patches);
 		return false;
 	}
@@ -904,19 +905,20 @@ inline bool init(map<PerPatchData, ItemType>& world, unsigned int n,
 template<typename PerPatchData, typename ItemType>
 inline bool init(map<PerPatchData, ItemType>& world, unsigned int n,
 		unsigned int mcmc_iterations, const ItemType* item_types,
-		unsigned int item_type_count)
+		unsigned int item_type_count, unsigned int update_frequency)
 {
 #if !defined(NDEBUG)
 	uint_fast32_t seed = 0;
 #else
 	uint_fast32_t seed = (uint_fast32_t) milliseconds();
 #endif
-	return init(world, n, mcmc_iterations, item_types, item_type_count, seed);
+	return init(world, n, mcmc_iterations, item_types, item_type_count, update_frequency, seed);
 }
 
 template<typename PerPatchData, typename ItemType, typename Stream, typename PatchReader>
 bool read(map<PerPatchData, ItemType>& world, Stream& in,
 		const ItemType* item_types, unsigned int item_type_count,
+		unsigned int update_frequency,
 		PatchReader& patch_reader = default_scribe())
 {
 	/* read PRNG state into a char* buffer */
@@ -980,7 +982,7 @@ bool read(map<PerPatchData, ItemType>& world, Stream& in,
 		}
 	}
 
-	if (!init(world.cache, item_types, item_type_count, world.n)) {
+	if (!init(world.cache, item_types, item_type_count, world.n, update_frequency)) {
 		for (auto row : world.patches) {
 			for (auto entry : row.value)
 				free(entry.value);

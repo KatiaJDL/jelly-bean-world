@@ -227,17 +227,18 @@ private:
 	}
 
 	template<typename A>
-	friend bool init(gibbs_field_cache<A>&, const A*, unsigned int, unsigned int);
+	friend bool init(gibbs_field_cache<A>&, const A*, unsigned int, unsigned int, unsigned int);
 };
 
 template<typename ItemType>
 bool init(gibbs_field_cache<ItemType>& cache,
-		const ItemType* item_types, unsigned int item_type_count, unsigned int n)
+		const ItemType* item_types, unsigned int item_type_count, unsigned int n, unsigned int update_frequency)
 {
 	cache.two_n = 2*n;
 	cache.four_n = 4*n;
 	cache.item_types = item_types;
 	cache.item_type_count = item_type_count;
+	cache.update_frequency = update_frequency;
 	return cache.init_helper(n);
 }
 
@@ -404,8 +405,6 @@ public:
 						current.items.add({ item_type, new_position, 0, 0 });
 					}
 				}
-
-			// } else if (current.items.length > 0) {
 			} else if (current.items.length > 0 && current_time==0) {
 				/* propose deleting an item */
 				unsigned int item_index = rng() % current.items.length;

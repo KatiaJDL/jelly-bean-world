@@ -393,8 +393,8 @@ inline bool is_stationary(const intensity_function function) {
 inline bool is_stationary(const interaction_function function) {
 	return (function == zero_interaction_fn
 		 || function == piecewise_box_interaction_fn
-		 || function == cross_interaction_fn)
-		 || function == moore_interaction_fn;
+		 || function == cross_interaction_fn
+		 || function == moore_interaction_fn);
 }
 
 /* NOTE: stationary regeneration functions are also constant */

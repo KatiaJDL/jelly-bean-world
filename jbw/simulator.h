@@ -2319,7 +2319,7 @@ status init(simulator<SimulatorData>& sim,
     } else if (!init(sim.world, sim.config.patch_size,
             sim.config.mcmc_iterations,
             sim.config.item_types.data,
-            (unsigned int) sim.config.item_types.length, seed)) {
+            (unsigned int) sim.config.item_types.length, sim.config.update_frequency, seed)) {
         free(sim.config); free(sim.data);
         free(sim.agents); free(sim.semaphores);
         free(sim.requested_moves); free(sim.scent_model);
@@ -2412,7 +2412,7 @@ bool read(simulator<SimulatorData>& sim, Stream& in, const SimulatorData& data)
         free(sim.config); return false;
     }
 
-    if (!read(sim.world, in, sim.config.item_types.data, (unsigned int) sim.config.item_types.length, sim.agents)) {
+    if (!read(sim.world, in, sim.config.item_types.data, (unsigned int) sim.config.item_types.length, sim.config.update_frequency, sim.agents)) {
         for (auto entry : sim.agents) {
             free(*entry.value); free(entry.value);
         }
