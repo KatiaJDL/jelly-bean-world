@@ -386,9 +386,12 @@ public:
 					}
 					else {
 						/* New intensity function */
-						float real_intensity = log(current.items.length) - LOG_N_SQUARED;
-						float r = cache.regeneration(new_position, current_time%cache.update_frequency, item_type);
-						log_acceptance_probability += log(1+r) + real_intensity;
+						// log_acceptance_probability += cache.intensity(new_position, item_type);
+						// float real_intensity = log(current.items.length) - LOG_N_SQUARED;
+						// float r = cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
+						// r = 0.0;
+						log_acceptance_probability += cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
+						//log_acceptance_probability += log(1+r) + real_intensity;
 					}
 
 					/* add log probability of inverse proposal */
