@@ -368,6 +368,8 @@ public:
 
 				float log_acceptance_probability = 0.0f;
 				bool new_position_occupied = false;
+				bool moore = false;
+				float* args= new float[0];
 				for (uint_fast8_t j = 0; j < new_neighborhood_size; j++) {
 					const auto& items = new_neighborhood[j]->items;
 					for (unsigned int m = 0; m < items.length; m++) {
@@ -375,8 +377,14 @@ public:
 							/* an item already exists at this proposed location */
 							new_position_occupied = true; break;
 						}
-						log_acceptance_probability += cache.interaction(new_position, items[m].location, item_type, items[m].item_type);
-						log_acceptance_probability += cache.interaction(items[m].location, new_position, items[m].item_type, item_type);
+						if (current_time==0) {
+							log_acceptance_probability += cache.interaction(new_position, items[m].location, item_type, items[m].item_type);
+							log_acceptance_probability += cache.interaction(items[m].location, new_position, items[m].item_type, item_type);
+						}
+						else if (item_type==items[m].item_type){
+							float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
+							moore = (moore || (moore_proba>-20));							
+						}
 					}
 					if (new_position_occupied) break;
 				}
@@ -385,6 +393,9 @@ public:
 						log_acceptance_probability += cache.intensity(new_position, item_type);
 					}
 					else {
+						/* Moore interaction function */
+						if (!moore) log_acceptance_probability += -500.0f;
+						else log_acceptance_probability += -20.0f;
 						/* New intensity function */
 						// log_acceptance_probability += cache.intensity(new_position, item_type);
 						// float real_intensity = log(current.items.length) - LOG_N_SQUARED;

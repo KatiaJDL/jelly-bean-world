@@ -178,9 +178,9 @@ float cross_hash_interaction_fn(const position pos1, const position pos2, const 
 
 float moore_interaction_fn(const position pos1, const position pos2, const float* args) {
 	const position diff = pos1 - pos2;
-	if (diff.x < 2 || diff.y <2)
-		return 20.0;
-	else return 0.0f;
+	if (abs(diff.x) < 2 && abs(diff.y) < 2)
+		return 1.0;
+	else return -200.0f;
 }
 
 interaction_function get_interaction_fn(interaction_fns type, const float* args, unsigned int num_args)
