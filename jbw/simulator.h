@@ -19,6 +19,8 @@
 
 #define _USE_MATH_DEFINES
 
+#define REGENERATION
+
 #include <iostream>
 
 #include <stdio.h>
@@ -2202,10 +2204,12 @@ private:
         }
 #endif
 
+#if defined(REGENERATION)
         if (time%config.update_frequency==0) {
             // std::cout << time/config.update_frequency << std::endl;
             world.update_patches(time);
         }  
+#endif
 
         /* compute new scent and vision for each agent */
         update_agent_scent_and_vision();

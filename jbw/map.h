@@ -659,8 +659,11 @@ public:
 		/* construct the Gibbs field and resample the patches at positions_to_sample */
 		gibbs_field<map<PerPatchData, ItemType>> field(
 			cache, patch_positions, neighborhoods, num_patches_to_sample, n);
-		for (unsigned int i = 0; i < mcmc_iterations/10; i++) {
-				field.sample(rng, current_time); 
+		/* resampling only if the items can vary*/
+		if (cache.varying_item_type_count > 0) { 
+			for (unsigned int i = 0; i < mcmc_iterations/10; i++) {
+					field.sample(rng, current_time); 
+			}
 		}
 	}
 
