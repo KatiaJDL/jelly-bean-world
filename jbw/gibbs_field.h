@@ -17,6 +17,8 @@
 #ifndef JBW_GIBBS_FIELD_H_
 #define JBW_GIBBS_FIELD_H_
 
+#define CLIMATE
+
 #include <stdio.h>
 #include <Python.h>
 
@@ -340,8 +342,13 @@ public:
 					item_type = rng() % cache.item_type_count;
 				}
 				else if (cache.varying_item_type_count > 0) {
-					unsigned int choice = rng() % cache.varying_item_type_count;
-					item_type = cache.varying_item_types[choice];
+					unsigned int choice = rng() % cache.varying_item_type_count +1;
+					if (choice < cache.varying_item_type_count) {
+						item_type = cache.varying_item_types[choice];
+					}
+#if defined(CLIMATE)
+					else item_type = 2;
+#endif
 				}
 				else break;
 				position new_position = patch_position_offset + position(rng() % n, rng() % n);
@@ -369,6 +376,9 @@ public:
 				float log_acceptance_probability = 0.0f;
 				bool new_position_occupied = false;
 				bool moore = false;
+#if defined(CLIMATE)
+				float log_humidity = 0.0f;
+#endif
 				float* args= new float[0];
 				for (uint_fast8_t j = 0; j < new_neighborhood_size; j++) {
 					const auto& items = new_neighborhood[j]->items;
@@ -385,6 +395,13 @@ public:
 							float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
 							moore = (moore || (moore_proba>0));							
 						}
+#if defined(CLIMATE)
+						if (items[m].item_type == 2) {
+							float* gaussian_args = new float[2];
+							gaussian_args[0] = 10; gaussian_args[1] = 2;
+							log_humidity +=gaussian_interaction_fn(new_position, items[m].location, gaussian_args);
+						}
+#endif
 					}
 					if (new_position_occupied) break;
 				}
@@ -396,6 +413,7 @@ public:
 						/* Moore interaction function */
 						if (!moore) log_acceptance_probability += -500.0f;
 						else log_acceptance_probability += -20.0f;
+#if !defined(CLIMATE)
 						/* New intensity function */
 						// log_acceptance_probability += cache.intensity(new_position, item_type);
 						// float real_intensity = log(current.items.length) - LOG_N_SQUARED;
@@ -403,6 +421,14 @@ public:
 						// r = 0.0;
 						log_acceptance_probability += cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
 						//log_acceptance_probability += log(1+r) + real_intensity;
+#else
+						if (item_type==2) {
+							log_acceptance_probability += precipitations(new_position, current_time);
+						}
+						else {
+							log_acceptance_probability += log_humidity + precipitations(new_position, current_time);
+						}
+#endif
 					}
 
 					/* add log probability of inverse proposal */

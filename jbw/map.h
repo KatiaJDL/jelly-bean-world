@@ -17,8 +17,11 @@
 #ifndef JBW_MAP_H_
 #define JBW_MAP_H_
 
+#define CLIMATE
+
 #include <core/map.h>
 #include "gibbs_field.h"
+#include "energy_functions.h"
 
 namespace jbw {
 
@@ -646,6 +649,22 @@ public:
 							p.items.remove(k); k--; continue;
 						}
 					}
+#if defined(CLIMATE)
+					if (item.item_type == 2) {
+						float rain = precipitations(item.location, current_time);
+						float* args= new float[0];
+						int moore = 0;
+						for (unsigned int j = 0; j < p.items.length; j++) {
+							if (item.item_type == 2) {
+								float moore_proba = moore_interaction_fn(item.location, p.items[j].location, args);
+								if (moore_proba>0) moore++;	
+							}
+						}
+						if (rain < 50 && (float) std::rand()/RAND_MAX < (100-rain)/100*(9-moore)/9) {
+							p.items.remove(k); k--; continue;
+						}
+					}
+#endif
                 }
 
                 /* get the neighborhoods of all the patches */

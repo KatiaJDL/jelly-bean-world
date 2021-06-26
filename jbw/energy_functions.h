@@ -430,6 +430,11 @@ inline bool is_custom(const regeneration_function function) {
 	return (function == custom_regeneration_fn);
 }
 
+float precipitations(const position pos, const uint64_t time) {
+	// Between 0 and 100
+	return 5;
+}
+
 } /* namespace jbw */
 
 #endif /* ENERGY_FUNCTIONS_H_ */
