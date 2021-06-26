@@ -383,7 +383,7 @@ public:
 						}
 						else if (item_type==items[m].item_type){
 							float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
-							moore = (moore || (moore_proba>-20));							
+							moore = (moore || (moore_proba>0));							
 						}
 					}
 					if (new_position_occupied) break;

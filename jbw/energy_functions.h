@@ -17,6 +17,7 @@
 #ifndef ENERGY_FUNCTIONS_H_
 #define ENERGY_FUNCTIONS_H_
 
+#include <math.h>
 #include "position.h"
 
 namespace jbw {
@@ -33,7 +34,7 @@ enum class intensity_fns : intensity_fns_type {
 
 typedef uint64_t interaction_fns_type;
 enum class interaction_fns : interaction_fns_type {
-	ZERO = 0, PIECEWISE_BOX, CROSS, CROSS_HASH, MOORE
+	ZERO = 0, PIECEWISE_BOX, CROSS, CROSS_HASH, MOORE, GAUSSIAN
 };
 
 typedef uint64_t regeneration_fns_type;
@@ -133,6 +134,12 @@ float piecewise_box_interaction_fn(const position pos1, const position pos2, con
 	else return 0.0f;
 }
 
+float gaussian_interaction_fn(const position pos1, const position pos2, const float* args){
+	const position diff = pos1 - pos2;
+	float dist = diff.x*diff.x/(2*args[0]*args[0]) + diff.y*diff.y/(2*args[0]*args[0]);
+	return args[1]-dist;
+}
+
 float cross_interaction_fn(const position pos1, const position pos2, const float* args)
 {
 	const position diff = pos1 - pos2;
@@ -216,6 +223,12 @@ interaction_function get_interaction_fn(interaction_fns type, const float* args,
 			return NULL;
 		}
 		return moore_interaction_fn;	
+	case interaction_fns::GAUSSIAN:
+		if (num_args != 2) {
+			fprintf(stderr, "get_interaction_fn ERROR: A gaussian interaction function requires 2 arguments.");
+			return NULL;
+		}
+		return gaussian_interaction_fn;	
 	}
 	fprintf(stderr, "get_interaction_fn ERROR: Unknown interaction function type.");
 	return NULL;
@@ -232,6 +245,8 @@ interaction_fns get_interaction_fn(interaction_function function) {
 		return interaction_fns::CROSS_HASH;
 	} else if (function == moore_interaction_fn) {
 		return interaction_fns::MOORE;
+	} else if (function == gaussian_interaction_fn) {
+		return interaction_fns::GAUSSIAN;
 	} else {
 		fprintf(stderr, "get_interaction_fn ERROR: Unknown interaction_function.");
 		exit(EXIT_FAILURE);
@@ -325,7 +340,8 @@ inline bool read(interaction_function& function, Stream& in) {
 	case interaction_fns::PIECEWISE_BOX: function = piecewise_box_interaction_fn; return true;
 	case interaction_fns::CROSS:         function = cross_interaction_fn; return true;
 	case interaction_fns::CROSS_HASH:    function = cross_hash_interaction_fn; return true;
-	case interaction_fns::MOORE:    function = moore_interaction_fn; return true;
+	case interaction_fns::MOORE:       	 function = moore_interaction_fn; return true;
+	case interaction_fns::GAUSSIAN:    	 function = gaussian_interaction_fn; return true;
 	}
 	fprintf(stderr, "read ERROR: Unrecognized interaction function.\n");
 	return false;
@@ -343,6 +359,8 @@ inline bool write(const interaction_function& function, Stream& out) {
 		return write((interaction_fns_type) interaction_fns::CROSS_HASH, out);
 	} else if (function == moore_interaction_fn) {
 		return write((interaction_fns_type) interaction_fns::MOORE, out);
+	} else if (function == gaussian_interaction_fn) {
+		return write((interaction_fns_type) interaction_fns::GAUSSIAN, out);
 	} else {
 		fprintf(stderr, "write ERROR: Unrecognized interaction function.\n");
 		return false;

@@ -11,17 +11,25 @@ class SimpleAgent(jbw.Agent):
 		super(SimpleAgent, self).__init__(simulator, load_filepath)
 
 	def do_next_action(self):
-		self.counter += 1
-		if self.counter % 20 == 0:
-			self.turn(jbw.RelativeDirection.LEFT)
-		elif self.counter % 20 == 5:
-			self.turn(jbw.RelativeDirection.LEFT)
-		elif self.counter % 20 == 10:
-			self.turn(jbw.RelativeDirection.RIGHT)
-		elif self.counter % 20 == 15:
-			self.turn(jbw.RelativeDirection.RIGHT)
-		else:
+		# self.counter += 1
+		# if self.counter % 20 == 0:
+		# 	self.turn(jbw.RelativeDirection.LEFT)
+		# elif self.counter % 20 == 5:
+		# 	self.turn(jbw.RelativeDirection.LEFT)
+		# elif self.counter % 20 == 10:
+		# 	self.turn(jbw.RelativeDirection.RIGHT)
+		# elif self.counter % 20 == 15:
+		# 	self.turn(jbw.RelativeDirection.RIGHT)
+		# else:
+		# 	self.move(jbw.RelativeDirection.FORWARD)
+
+		next_action = randint(0,2)
+		if next_action == 0:
 			self.move(jbw.RelativeDirection.FORWARD)
+		elif next_action == 1:
+			self.turn(jbw.RelativeDirection.LEFT)
+		elif next_action == 2:
+			self.turn(jbw.RelativeDirection.RIGHT)
 
 	def save(self, filepath):
 		with open(filepath, 'w') as fout:
@@ -43,7 +51,8 @@ def make_config():
 						   [jbw.InteractionFunction.ZERO]                                        # parameters for interaction between item 0 and item 3
 						], 
 						#regeneration_fn=jbw.RegenerationFunction.CONSTANT, regeneration_fn_args=[0.1], 
-						lifetime= 10))
+						lifetime= 10
+						))
 	items.append(jbw.Item("onion",     [1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0, 1, 0, 0], [0, 0, 0, 0], False, 0.0,
 					   intensity_fn=jbw.IntensityFunction.CONSTANT, intensity_fn_args=[-5.0],
 					   interaction_fns=[

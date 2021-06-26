@@ -164,3 +164,5 @@ class InteractionFunction(Enum):
     d_1 = c + M'(x[0] / s) and d_2 = d_1 + \delta,
   where M' is defined above in the documentation of `RADIAL_HASH`. The
   arguments for this function should be [s, c, k, \delta, a_1, a_2, b_1, b_2]. """
+
+  GAUSSIAN = 5
