@@ -46,7 +46,7 @@ def make_config():
 					   intensity_fn=jbw.IntensityFunction.CONSTANT, intensity_fn_args=[-5.3],
 					   interaction_fns=[
 						   [jbw.InteractionFunction.PIECEWISE_BOX, 10.0, 200.0, 0.0, -6.0],      # parameters for interaction between item 0 and item 0
-						   [jbw.InteractionFunction.PIECEWISE_BOX, 200.0, 0.0, -6.0, -6.0],      # parameters for interaction between item 0 and item 1
+						   [jbw.InteractionFunction.ZERO],								         # parameters for interaction between item 0 and item 1
 						   [jbw.InteractionFunction.PIECEWISE_BOX, 10.0, 200.0, 2.0, -100.0],    # parameters for interaction between item 0 and item 2
 						   [jbw.InteractionFunction.ZERO]                                        # parameters for interaction between item 0 and item 3
 						], 
@@ -54,18 +54,19 @@ def make_config():
 						lifetime= 10
 						))
 	items.append(jbw.Item("onion",     [1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0, 1, 0, 0], [0, 0, 0, 0], False, 0.0,
-					   intensity_fn=jbw.IntensityFunction.CONSTANT, intensity_fn_args=[-5.0],
+					   intensity_fn=jbw.IntensityFunction.CONSTANT, intensity_fn_args=[-5],
 					   interaction_fns=[
-						   [jbw.InteractionFunction.PIECEWISE_BOX, 200.0, 0.0, -6.0, -6.0],      # parameters for interaction between item 1 and item 0
+						   [jbw.InteractionFunction.ZERO],      								 # parameters for interaction between item 1 and item 0
 						   [jbw.InteractionFunction.ZERO],                                       # parameters for interaction between item 1 and item 1
-						   [jbw.InteractionFunction.PIECEWISE_BOX, 200.0, 0.0, -100.0, -100.0],  # parameters for interaction between item 1 and item 2
-						   [jbw.InteractionFunction.ZERO]                                        # parameters for interaction between item 1 and item 3
+						   [jbw.InteractionFunction.ZERO],  									 # parameters for interaction between item 1 and item 2
+						   [jbw.InteractionFunction.PIECEWISE_BOX, 40.0, 200.0, 1.0, -0.2],
+						   #[jbw.InteractionFunction.GAUSSIAN, 4, 0.5]                                        # parameters for interaction between item 1 and item 3
 						]))
 	items.append(jbw.Item("jellybean", [0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0, 0, 0, 0], [0, 0, 0, 0], False, 0.0,
 					   intensity_fn=jbw.IntensityFunction.CONSTANT, intensity_fn_args=[-5.3],
 					   interaction_fns=[
 						   [jbw.InteractionFunction.PIECEWISE_BOX, 10.0, 200.0, 2.0, -100.0],    # parameters for interaction between item 2 and item 0
-						   [jbw.InteractionFunction.PIECEWISE_BOX, 200.0, 0.0, -100.0, -100.0],  # parameters for interaction between item 2 and item 1
+						   [jbw.InteractionFunction.ZERO],  									 # parameters for interaction between item 2 and item 1
 						   [jbw.InteractionFunction.PIECEWISE_BOX, 10.0, 200.0, 0.0, -6.0],      # parameters for interaction between item 2 and item 2
 						   [jbw.InteractionFunction.ZERO]                                        # parameters for interaction between item 2 and item 3
 						], 

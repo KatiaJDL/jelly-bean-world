@@ -309,6 +309,14 @@ public:
 
 	template<typename RNGType>
 	void sample(RNGType& rng, uint64_t current_time = 0) {
+
+		float humidity_precipitations = 0;
+		float humidity_lakes = 1;
+		float a_humidity = 2;
+		float sigma_humidity = 10;
+		size_t threshold_wetness = 30;
+		float loop = 0;
+
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
 #endif
@@ -391,14 +399,25 @@ public:
 							log_acceptance_probability += cache.interaction(new_position, items[m].location, item_type, items[m].item_type);
 							log_acceptance_probability += cache.interaction(items[m].location, new_position, items[m].item_type, item_type);
 						}
+#if defined(CLIMATE)
+						else if (item_type==items[m].item_type && item_type !=2){
+							float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
+							moore = (moore || (moore_proba>0));							
+						}
+						else if (item_type==items[m].item_type && item_type ==2){
+						 	float moore_proba = four_interaction_fn(new_position, items[m].location, args);
+						 	moore = (moore || (moore_proba>0));	
+						}
+#else
 						else if (item_type==items[m].item_type){
 							float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
 							moore = (moore || (moore_proba>0));							
 						}
+#endif
 #if defined(CLIMATE)
-						if (items[m].item_type == 2) {
+						if (items[m].item_type == 2 && precipitations(new_position, current_time)> threshold_wetness) {
 							float* gaussian_args = new float[2];
-							gaussian_args[0] = 10; gaussian_args[1] = 2;
+							gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
 							log_humidity +=gaussian_interaction_fn(new_position, items[m].location, gaussian_args);
 						}
 #endif
@@ -423,10 +442,10 @@ public:
 						//log_acceptance_probability += log(1+r) + real_intensity;
 #else
 						if (item_type==2) {
-							log_acceptance_probability += precipitations(new_position, current_time);
+							log_acceptance_probability += (1-loop)*precipitations(new_position, current_time) + loop*(humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time));
 						}
 						else {
-							log_acceptance_probability += log_humidity + precipitations(new_position, current_time);
+							log_acceptance_probability += humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time);
 						}
 #endif
 					}

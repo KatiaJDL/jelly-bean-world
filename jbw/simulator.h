@@ -2206,6 +2206,26 @@ private:
 
 #if defined(REGENERATION)
         if (time%config.update_frequency==0) {
+            
+            int banana = 0;
+            int jellybean = 0;
+            int lakes = 0;
+            
+            for(auto i = world.patches.begin(); i!=world.patches.end(); ++i) {
+			    array_map<int64_t, patch<patch_data>>& row = world.patches.values[(long int) i.position];
+					
+                for(auto j = row.begin(); j != row.end(); ++j) {
+                    patch_type& p = row.values[(long int) j.position];
+                    
+                    for (size_t k = 0; k < p.items.length; k++) {
+                        if (p.items[k].item_type==1) banana ++;
+                        if (p.items[k].item_type==2) lakes ++;
+                        if (p.items[k].item_type==3) jellybean ++;
+                    }
+                }
+            }
+            std::cout << "[" << banana << ", " << lakes << ", " << jellybean << "]," << std::endl;
+
             // std::cout << time/config.update_frequency << std::endl;
             world.update_patches(time);
         }  

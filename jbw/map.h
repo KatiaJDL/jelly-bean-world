@@ -620,6 +620,11 @@ public:
 
 	inline void update_patches(uint64_t current_time) {
 
+		size_t update_iterations = mcmc_iterations/10;
+		int threshold_dryness = 50;
+		float evaporation = 0.7;
+
+
         /* Iterate over patches */
 		/* get the neighborhoods of all the patches */
 			position* patch_positions = new position[nb_patches];
@@ -660,7 +665,7 @@ public:
 								if (moore_proba>0) moore++;	
 							}
 						}
-						if (rain < 50 && (float) std::rand()/RAND_MAX < (100-rain)/100*(9-moore)/9) {
+						if (rain < threshold_dryness && (float) std::rand()/RAND_MAX < (100-rain)/100*(9-moore)/9*evaporation) {
 							p.items.remove(k); k--; continue;
 						}
 					}
@@ -680,7 +685,7 @@ public:
 			cache, patch_positions, neighborhoods, num_patches_to_sample, n);
 		/* resampling only if the items can vary*/
 		if (cache.varying_item_type_count > 0) { 
-			for (unsigned int i = 0; i < mcmc_iterations/10; i++) {
+			for (unsigned int i = 0; i < update_iterations; i++) {
 					field.sample(rng, current_time); 
 			}
 		}
