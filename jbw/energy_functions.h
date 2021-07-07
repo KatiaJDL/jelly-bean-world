@@ -34,7 +34,7 @@ enum class intensity_fns : intensity_fns_type {
 
 typedef uint64_t interaction_fns_type;
 enum class interaction_fns : interaction_fns_type {
-	ZERO = 0, PIECEWISE_BOX, CROSS, CROSS_HASH, MOORE, GAUSSIAN
+	ZERO = 0, PIECEWISE_BOX, CROSS, CROSS_HASH, MOORE, GAUSSIAN, FOUR
 };
 
 typedef uint64_t regeneration_fns_type;
@@ -136,8 +136,8 @@ float piecewise_box_interaction_fn(const position pos1, const position pos2, con
 
 float gaussian_interaction_fn(const position pos1, const position pos2, const float* args){
 	const position diff = pos1 - pos2;
-	float dist = diff.x*diff.x/(2*args[0]*args[0]) + diff.y*diff.y/(2*args[0]*args[0]);
-	return args[1]-dist;
+	float dist = exp(-diff.x*diff.x/(2*args[0]*args[0]) - diff.y*diff.y/(2*args[0]*args[0]));
+	return args[1]*dist;
 }
 
 float cross_interaction_fn(const position pos1, const position pos2, const float* args)
@@ -190,6 +190,17 @@ float moore_interaction_fn(const position pos1, const position pos2, const float
 	else return -200.0f;
 }
 
+float four_interaction_fn(const position pos1, const position pos2, const float* args) {
+	const position diff = pos1 - pos2;
+	if (abs(diff.x) < 1 && abs(diff.y) < 2)
+		return 1.0;
+	else {
+		if (abs(diff.y) < 1 && abs(diff.x) < 2)
+			return 1.0;
+		else return -200.0f;
+	}
+}
+
 interaction_function get_interaction_fn(interaction_fns type, const float* args, unsigned int num_args)
 {
 	switch (type) {
@@ -222,7 +233,13 @@ interaction_function get_interaction_fn(interaction_fns type, const float* args,
 			fprintf(stderr, "get_interaction_fn ERROR: A moore interaction function requires zero arguments.");
 			return NULL;
 		}
-		return moore_interaction_fn;	
+		return moore_interaction_fn;
+	case interaction_fns::FOUR:
+		if (num_args != 0) {
+			fprintf(stderr, "get_interaction_fn ERROR: A four interaction function requires zero arguments.");
+			return NULL;
+		}
+		return four_interaction_fn;	
 	case interaction_fns::GAUSSIAN:
 		if (num_args != 2) {
 			fprintf(stderr, "get_interaction_fn ERROR: A gaussian interaction function requires 2 arguments.");
@@ -245,6 +262,8 @@ interaction_fns get_interaction_fn(interaction_function function) {
 		return interaction_fns::CROSS_HASH;
 	} else if (function == moore_interaction_fn) {
 		return interaction_fns::MOORE;
+	} else if (function == four_interaction_fn) {
+		return interaction_fns::FOUR;
 	} else if (function == gaussian_interaction_fn) {
 		return interaction_fns::GAUSSIAN;
 	} else {
@@ -341,6 +360,7 @@ inline bool read(interaction_function& function, Stream& in) {
 	case interaction_fns::CROSS:         function = cross_interaction_fn; return true;
 	case interaction_fns::CROSS_HASH:    function = cross_hash_interaction_fn; return true;
 	case interaction_fns::MOORE:       	 function = moore_interaction_fn; return true;
+	case interaction_fns::FOUR:       	 function = four_interaction_fn; return true;
 	case interaction_fns::GAUSSIAN:    	 function = gaussian_interaction_fn; return true;
 	}
 	fprintf(stderr, "read ERROR: Unrecognized interaction function.\n");
@@ -359,6 +379,8 @@ inline bool write(const interaction_function& function, Stream& out) {
 		return write((interaction_fns_type) interaction_fns::CROSS_HASH, out);
 	} else if (function == moore_interaction_fn) {
 		return write((interaction_fns_type) interaction_fns::MOORE, out);
+	} else if (function == four_interaction_fn) {
+		return write((interaction_fns_type) interaction_fns::FOUR, out);
 	} else if (function == gaussian_interaction_fn) {
 		return write((interaction_fns_type) interaction_fns::GAUSSIAN, out);
 	} else {
@@ -432,7 +454,12 @@ inline bool is_custom(const regeneration_function function) {
 
 float precipitations(const position pos, const uint64_t time) {
 	// Between 0 and 100
-	return 5;
+	float period = 200;
+	return 50 + 45*sin(2*3.14*time/period);
+	// return 20;
+	// if (time % 400 < 100) return 80;
+	// else return 25;
+	
 }
 
 } /* namespace jbw */
