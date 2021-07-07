@@ -17,7 +17,7 @@
 #ifndef JBW_MAP_H_
 #define JBW_MAP_H_
 
-#define CLIMATE
+// #define CLIMATE
 
 #include <core/map.h>
 #include "gibbs_field.h"

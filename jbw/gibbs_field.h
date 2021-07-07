@@ -17,7 +17,7 @@
 #ifndef JBW_GIBBS_FIELD_H_
 #define JBW_GIBBS_FIELD_H_
 
-#define CLIMATE
+// #define CLIMATE
 
 #include <stdio.h>
 #include <Python.h>
@@ -350,12 +350,15 @@ public:
 					item_type = rng() % cache.item_type_count;
 				}
 				else if (cache.varying_item_type_count > 0) {
-					unsigned int choice = rng() % cache.varying_item_type_count +1;
+#if defined(CLIMATE)
+					unsigned int choice = rng() % cache.varying_item_type_count+1;
 					if (choice < cache.varying_item_type_count) {
 						item_type = cache.varying_item_types[choice];
 					}
-#if defined(CLIMATE)
 					else item_type = 2;
+#else
+					unsigned int choice = rng() % cache.varying_item_type_count;
+					item_type = cache.varying_item_types[choice];					
 #endif
 				}
 				else break;
