@@ -74,7 +74,7 @@ def make_config():
 						   [jbw.InteractionFunction.PIECEWISE_BOX, 10.0, 200.0, 0.0, -6.0],      # parameters for interaction between item 2 and item 2
 						   [jbw.InteractionFunction.ZERO]                                        # parameters for interaction between item 2 and item 3
 						], 
-						regeneration_fn=jbw.RegenerationFunction.CONSTANT, regeneration_fn_args=[20]
+						regeneration_fn=jbw.RegenerationFunction.CONSTANT, regeneration_fn_args=[25]
 						#regeneration_fn=jbw.RegenerationFunction.CUSTOM, regeneration_fn_args=[20, 20, 20, 20, 20, 20, 20, 20, 20, 20, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100]
 						, lifetime = 10
 						))

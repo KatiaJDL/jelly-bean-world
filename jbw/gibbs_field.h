@@ -17,7 +17,7 @@
 #ifndef JBW_GIBBS_FIELD_H_
 #define JBW_GIBBS_FIELD_H_
 
-// #define CLIMATE
+#define CLIMATE
 
 #include <stdio.h>
 #include <Python.h>
@@ -316,7 +316,7 @@ public:
 		float sigma_humidity = 10;
 		size_t threshold_wetness = 30;
 		float loop = 0;
-		float moore_amplitude = -20;
+		float moore_amplitude = 0;
 
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
@@ -436,22 +436,24 @@ public:
 						/* Moore interaction function */
 						if (moore==0) log_acceptance_probability += -500.0f;
 						else log_acceptance_probability += moore_amplitude*(9-moore)/9;
+						float r = 0.0;
+						float real_intensity = log(current.items.length) - LOG_N_SQUARED;
+
 #if !defined(CLIMATE)
 						/* New intensity function */
 						// log_acceptance_probability += cache.intensity(new_position, item_type);
-						// float real_intensity = log(current.items.length) - LOG_N_SQUARED;
-						// float r = cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
-						// r = 0.0;
-						log_acceptance_probability += cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
-						//log_acceptance_probability += log(1+r) + real_intensity;
+						r = cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
+						//log_acceptance_probability += cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
+						
 #else
 						if (item_type==2) {
-							log_acceptance_probability += (1-loop)*precipitations(new_position, current_time) + loop*(humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time));
+							r = (1-loop)*precipitations(new_position, current_time) + loop*(humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time));
 						}
 						else {
-							log_acceptance_probability += humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time);
+							r = humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time);
 						}
 #endif
+						log_acceptance_probability += log(1+r/100) + real_intensity;
 					}
 
 					/* add log probability of inverse proposal */
@@ -528,11 +530,16 @@ public:
 				if (current_time>0){
 					/* Moore interaction function */
 					if (moore==0) log_acceptance_probability += -500.0f;
-					else log_acceptance_probability += moore_amplitude*(9-moore)/9;
+					else log_acceptance_probability -= moore_amplitude*(9-moore)/9;
 
-					log_acceptance_probability -= (1-loop)*precipitations(old_position, current_time) + loop*(humidity_lakes* log_humidity + humidity_precipitations* precipitations(old_position, current_time));					
+					float real_intensity = log(current.items.length) - LOG_N_SQUARED;
+					float r = (1-loop)*precipitations(old_position, current_time) + loop*(humidity_lakes* log_humidity + humidity_precipitations* precipitations(old_position, current_time));
+					log_acceptance_probability -= log(1+r/100) - real_intensity;					
 				}
-				else log_acceptance_probability -= cache.intensity(old_position, old_item_type);
+				else {
+					log_acceptance_probability -= cache.intensity(old_position, old_item_type);
+					//std::cout << log_acceptance_probability << std::endl; 
+				}
 #else
 				log_acceptance_probability -= cache.intensity(old_position, old_item_type);
 #endif
