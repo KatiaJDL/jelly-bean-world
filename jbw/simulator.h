@@ -451,6 +451,102 @@ inline bool write(const action_policy& type, Stream& out) {
 }
 
 /**
+ * A structure containing the properties of the climate configuration
+ */
+struct config_climate {
+    float threshold_dryness;
+    float threshold_wetness;
+    float evaporation;
+	float humidity_lakes;
+	float a_humidity;
+	float sigma_humidity;
+	float loop;
+
+    inline bool init_helper(const config_climate& src){
+        threshold_dryness = src.threshold_dryness;
+        threshold_wetness = src.threshold_wetness;
+        evaporation = src.evaporation;
+        humidity_lakes = src.humidity_lakes;
+        a_humidity = src.a_humidity;
+        sigma_humidity = src.sigma_humidity;
+        loop = src.loop;
+
+        return true;
+    }
+};
+
+/**
+ * Initializes the properties of the climate configuration.
+ *
+ * \param   threshold_dryness     The threshold for deletion of water cells (above,
+ *                                  no deletion)
+ * \param   threshold_wetness     The threshold for creation of water cells (above,
+ *                                  no creation)
+ * \param   evaporation           The probability for water cells to disappear when 
+ *                                  the precipitation rate is 0% and the cell is isolated.
+ * \param   humidity_lakes        Lakes contribution for humidity
+ * \param   a_humidity            Amplitude of the normal distribution used to
+ *                                  compute humidity due to lakes.
+ * \param   sigma_humidity        Standard deviation of the normal distribution
+ *                                  used to compute humidity due to lakes.
+ * \param   loop                  Proportion of humidity taken into account for
+ *                                  lakes evolution
+ */
+template<typename T>
+inline bool init(
+        config_climate config,
+        float threshold_dryness,
+        float threshold_wetness,
+        float evaporation,
+        float humidity_lakes,
+        float a_humidity,
+        float sigma_humidity,
+        float loop)
+{
+    config.threshold_dryness = threshold_dryness;
+    config.threshold_wetness = threshold_wetness;
+    config.evaporation = evaporation;
+    config.humidity_lakes = humidity_lakes;
+    config.a_humidity = a_humidity;
+    config.sigma_humidity = sigma_humidity;
+    config.loop = loop;
+    
+    return true;
+}
+
+inline bool init(config_climate& config, const config_climate& src)
+{
+    return config.init_helper(src);
+}
+
+template<typename Stream>
+bool read(config_climate& config, Stream& in) {
+    if (!read(config.threshold_dryness, in)
+     || !read(config.threshold_wetness, in)
+     || !read(config.evaporation, in)
+     || !read(config.humidity_lakes, in)
+     || !read(config.a_humidity, in)
+     || !read(config.sigma_humidity, in)
+     || !read(config.loop, in))
+        return false;
+    return true;
+}
+
+/**
+ * Writes the given simulator_config `config` to the output stream `out`.
+ */
+template<typename Stream>
+bool write(const config_climate& config, Stream& out) {
+    return write(config.threshold_dryness, out)
+        && write(config.threshold_wetness, out)
+        && write(config.evaporation, out)
+        && write(config.humidity_lakes, out)
+        && write(config.a_humidity, out)
+        && write(config.sigma_humidity, out)
+        && write(config.loop, out);
+}
+
+/**
  * Represents the configuration of a simulator. 
  */
 struct simulator_config {
@@ -470,7 +566,13 @@ struct simulator_config {
     array<item_properties> item_types;
     float* agent_color;
     movement_conflict_policy collision_policy;
+
     unsigned int update_frequency;
+    unsigned int update_iterations;
+
+    bool is_climate;
+
+    config_climate climate;
 
     /* parameters for scent diffusion */
     float decay_param, diffusion_param;
@@ -1427,7 +1529,11 @@ public:
         world(config.patch_size,
             config.mcmc_iterations,
             config.item_types.data,
-            (unsigned int) config.item_types.length, config.update_frequency, seed),
+            (unsigned int) config.item_types.length, config.update_frequency, config.update_iterations,
+            config.climate.threshold_dryness, config.climate.threshold_wetness, 
+		    config.climate.evaporation, config.climate.humidity_lakes, 
+            config.climate.a_humidity, config.climate.sigma_humidity, 
+            config.climate.loop, seed),
         agents(32), semaphores(8), id_counter(1), requested_moves(32, alloc_position_keys),
         acted_agent_count(0), active_agent_count(0), data(data), time(0)
     {
@@ -1436,16 +1542,6 @@ public:
             fprintf(stderr, "simulator ERROR: Unable to initialize scent_model.\n");
             exit(EXIT_FAILURE);
         }
-    }
-
-    inline int test_python() {
-
-	    Py_Initialize();
-
-	    PyRun_SimpleString("print('Hello World from Embedded Python!!!')");
-
-        return 0;
-
     }
 
     /**
@@ -2205,7 +2301,7 @@ private:
 #endif
 
 #if defined(REGENERATION)
-        if (time%config.update_frequency==0) {
+        if (config.update_frequency != 0 && time%config.update_frequency==0) {
             
             int banana = 0;
             int jellybean = 0;

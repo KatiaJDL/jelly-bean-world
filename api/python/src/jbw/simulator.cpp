@@ -842,6 +842,25 @@ static inline void import_errors() {
  *                  - (int) The duration of time for which removed items are
  *                    remembered by the simulation in order to compute their
  *                    scent contribution.
+ *                  - (int) The frequency at which to update the patches 
+ *                    to let the map evolve.
+ *                  - (int) The number of Gibbs sampling iterations
+ *                    performed for re-sampling each patch of the map during 
+ *                    the simulation.
+ *                  - (bool) Whether this environment designed for climate dynamics.
+ *                  - (float) The threshold for deletion of water cells (above,
+ *                    no deletion)
+ *                  - (float) The threshold for creation of water cells (above,
+ *                    no creation)
+ *                  - (float) The probability for water cells to disappear when 
+ *                    the precipitation rate is 0% and the cell is isolated.
+ *                  - (float) Part of lakes contribution for humidity (between 0 and 1).
+ *                  - (float) The amplitude of the normal distribution used to
+ *                    compute humidity due to lakes.
+ *                  - (float) The standard deviation of the normal distribution
+ *                    used to compute humidity due to lakes.
+ *                  - (float) The proportion of humidity taken into account for
+ *                    lakes evolution (between 0 and 1).
  *                  - (function) The function to invoke when the simulator
  *                    advances time.
  *
@@ -863,7 +882,7 @@ static inline void import_errors() {
  *                    elements are its arguments.
  *                  - (int) The ID of the regeneration function.
  *                  - (list of floats) The arguments to the regeneration function.
- *                  - (int) THe lifetime of the item, 0 if eternal life
+ *                  - (int) The lifetime of the item, 0 if eternal life
  * \returns Pointer to the new simulator.
  */
 static PyObject* simulator_new(PyObject *self, PyObject *args)
@@ -876,15 +895,20 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
     PyObject* py_agent_color;
     unsigned int seed;
     unsigned int collision_policy;
+    PyObject* py_climate;
     PyObject* py_callback;
     if (!PyArg_ParseTuple(
-      args, "IIOOOIIIIIOOIfffIIO", &seed, &config.max_steps_per_movement,
+      args, "IIOOOIIIIIOOIfffIIIOfffffffO", &seed, &config.max_steps_per_movement,
       &py_allowed_movement_directions, &py_allowed_turn_directions, &py_no_op_allowed,
       &config.scent_dimension, &config.color_dimension, &config.vision_range,
       &config.patch_size, &config.mcmc_iterations, &py_items, &py_agent_color,
       &collision_policy, &config.agent_field_of_view, &config.decay_param,
       &config.diffusion_param, &config.deleted_item_lifetime, 
-      &config.update_frequency, &py_callback)) {
+      &config.update_frequency, &config.update_iterations, &py_climate, 
+      &config.climate.threshold_dryness, &config.climate.threshold_wetness, 
+      &config.climate.evaporation, &config.climate.humidity_lakes, 
+      &config.climate.a_humidity, &config.climate.sigma_humidity, &config.climate.loop,
+      &py_callback)) {
         fprintf(stderr, "Invalid argument types in the call to 'simulator_c.new'.\n");
         return NULL;
     }
@@ -908,6 +932,7 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
             " list with length equal to the number of possible movement directions.\n");
         return NULL;
     }
+    config.is_climate = (py_climate == Py_True);
 
     PyObject *py_items_iter = PyObject_GetIter(py_items);
     if (!py_items_iter) {

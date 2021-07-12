@@ -74,7 +74,10 @@ class SimulatorConfig(object):
         diffusion_param,
         deleted_item_lifetime,
         seed=0,
-        update_frequency=5
+        update_frequency=5,
+        update_iterations=None,
+        climate = False,
+        config_climate = None
     ):
         """Creates a new simulator configuration.
 
@@ -110,13 +113,18 @@ class SimulatorConfig(object):
                                        step.
           deleted_item_lifetime:       How long to keep track of deleted items
                                        after they have been removed from the world.
+          update_iterations:           Number of Gibbs sampling iterations
+                                       performed for re-sampling each patch of the
+                                       map during the simulation.
+          update_frequency:            At which frequency to update the patches 
+                                       (0 means no update).
           seed:                        The initial seed for the pseudorandom number
                                        generator.
-          update_frequency:            At which frequency to update the patches
+          climate:                     Whether this environment designed for climate 
+                                       dynamics                 
         """
         assert len(items) > 0, "A non-empty list of items must be provided."
         self.max_steps_per_movement = max_steps_per_movement
-        self.update_frequency = update_frequency
         self.allowed_movement_directions = allowed_movement_directions
         self.allowed_turn_directions = allowed_turn_directions
         self.no_op_allowed = no_op_allowed
@@ -151,7 +159,55 @@ class SimulatorConfig(object):
         self.deleted_item_lifetime = deleted_item_lifetime
         self.agent_field_of_view = agent_field_of_view
         self.seed = seed
+        
+        self.update_frequency = update_frequency
+        if update_iterations is not None:
+            self.update_iterations = update_iterations
+        else :
+            self.update_iterations = mcmc_num_iter//10
 
+        self.climate = climate
+        if config_climate is not None:
+            self.config_climate = config_climate
+        else:
+            self.config_climate= ConfigClimate()
+
+class ConfigClimate(object):
+    "Represent a configuration for a variable environment and climate dynamics"
+    def __init__(
+        self,
+        threshold_dryness = 50,
+        threshold_wetness = 30,
+        evaporation = 0.7,
+		humidity_lakes = 1,
+		a_humidity = 2,
+		sigma_humidity = 10,
+		loop = 0
+    ):
+        """Creates a new configuration for an environment with climate dynamics.
+
+        Arguments:
+          threshold_dryness:           Above, no deletion of water cells.
+          threshold_wetness:           Under it, no creation of water cells.
+          evaporation:                 Probability for water cells to disappear when
+                                       the precipitation rate is 0% and the cell is 
+                                       isolated.
+          humidity_lakes:              Part of lakes contribution for humidity
+                                       (between 0 and 1).
+          a_humidity:                  Amplitude of the normal distribution used to 
+                                       compute humidity due to lakes.
+          sigma_humidity:              Standard deviation of the normal distribution 
+                                       used to compute humidity due to lakes.
+          loop:                        Proportion of humidity taken into account for
+                                       lakes evolution (between 0 and 1).
+        """
+        self.threshold_dryness = threshold_dryness
+        self.evaporation = evaporation
+        self.humidity_lakes = humidity_lakes
+        self.a_humidity = a_humidity
+        self.sigma_humidity = sigma_humidity
+        self.threshold_wetness = threshold_wetness
+        self.loop = loop
 
 class Simulator(object):
     """Environment simulator.
@@ -320,6 +376,15 @@ class Simulator(object):
                 sim_config.diffusion_param,
                 sim_config.deleted_item_lifetime,
                 sim_config.update_frequency,
+                sim_config.update_iterations,
+                sim_config.climate,
+                sim_config.config_climate.threshold_dryness,
+                sim_config.config_climate.threshold_wetness,
+                sim_config.config_climate.evaporation,
+		        sim_config.config_climate.humidity_lakes,
+		        sim_config.config_climate.a_humidity,
+		        sim_config.config_climate.sigma_humidity,
+		        sim_config.config_climate.loop,
                 self._step_callback,
             )
             if is_server:

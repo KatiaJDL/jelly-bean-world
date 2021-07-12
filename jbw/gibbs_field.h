@@ -17,7 +17,7 @@
 #ifndef JBW_GIBBS_FIELD_H_
 #define JBW_GIBBS_FIELD_H_
 
-// #define CLIMATE
+#define CLIMATE
 
 #include <stdio.h>
 #include <Python.h>
@@ -50,10 +50,21 @@ struct gibbs_field_cache
 
 	const ItemType* item_types;
 	unsigned int item_type_count;
+
 	unsigned int* varying_item_types;
 	unsigned int varying_item_type_count;
 
+	/* Climate parameters*/
+	float threshold_dryness;
+	float threshold_wetness;
+	float evaporation;
+	float humidity_lakes;
+	float a_humidity;
+	float sigma_humidity;
+	float loop;
+
 	unsigned int update_frequency;
+	unsigned int update_iterations;
 
 #if SAMPLING_METHOD == GIBBS_SAMPLING
 	/* the list of patch positions to visit during each Gibbs iteration;
@@ -64,8 +75,14 @@ struct gibbs_field_cache
 	position* top_right_positions;
 #endif
 
-	gibbs_field_cache(const ItemType* item_types, unsigned int item_type_count, unsigned int n, unsigned int update_frequency) :
-		two_n(2*n), four_n(4*n), item_types(item_types), item_type_count(item_type_count), update_frequency(update_frequency)
+	gibbs_field_cache(const ItemType* item_types, unsigned int item_type_count, 
+					unsigned int n, unsigned int update_frequency, float update_iterations, 
+					float threshold_dryness, float threshold_wetness, float evaporation, 
+					float humidity_lakes, float a_humidity, float sigma_humidity, float loop) :
+		two_n(2*n), four_n(4*n), item_types(item_types), item_type_count(item_type_count), 
+		update_frequency(update_frequency), update_iterations(update_iterations), threshold_dryness(threshold_dryness), 
+		threshold_wetness(threshold_wetness), evaporation(evaporation), humidity_lakes(humidity_lakes),
+		a_humidity(a_humidity),sigma_humidity(sigma_humidity), loop(loop)
 	{
 		if (!init_helper(n)) exit(EXIT_FAILURE);
 	}
@@ -310,11 +327,10 @@ public:
 	template<typename RNGType>
 	void sample(RNGType& rng, uint64_t current_time = 0) {
 
-		float humidity_precipitations = 0;
 		float humidity_lakes = 1;
 		float a_humidity = 2;
 		float sigma_humidity = 10;
-		size_t threshold_wetness = 30;
+		float threshold_wetness = 30;
 		float loop = 0;
 
 #if SAMPLING_METHOD == MH_SAMPLING
@@ -420,7 +436,7 @@ public:
 #if defined(CLIMATE)
 						if (items[m].item_type == 2 && precipitations(new_position, current_time)> threshold_wetness) {
 							float* gaussian_args = new float[2];
-							gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
+							gaussian_args[0] = cache.sigma_humidity; gaussian_args[1] = cache.a_humidity;
 							log_humidity +=gaussian_interaction_fn(new_position, items[m].location, gaussian_args);
 						}
 #endif
@@ -442,13 +458,14 @@ public:
 						// float r = cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
 						// r = 0.0;
 						log_acceptance_probability += cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
-						//log_acceptance_probability += log(1+r) + real_intensity;
+						// log_acceptance_probability += log(1+r) + real_intensity;
+						// log_acceptance_probability += cache.intensity(new_position, item_type);
 #else
 						if (item_type==2) {
-							log_acceptance_probability += (1-loop)*precipitations(new_position, current_time) + loop*(humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time));
+							log_acceptance_probability += (1-cache.loop)*precipitations(new_position, current_time) + cache.loop*(cache.humidity_lakes* log_humidity + (1-cache.humidity_lakes)* precipitations(new_position, current_time));
 						}
 						else {
-							log_acceptance_probability += humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time);
+							log_acceptance_probability += cache.humidity_lakes* log_humidity + (1-cache.humidity_lakes)* precipitations(new_position, current_time);
 						}
 #endif
 					}

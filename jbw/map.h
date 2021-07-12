@@ -17,7 +17,7 @@
 #ifndef JBW_MAP_H_
 #define JBW_MAP_H_
 
-// #define CLIMATE
+#define CLIMATE
 
 #include <core/map.h>
 #include "gibbs_field.h"
@@ -243,8 +243,12 @@ struct map
 	typedef ItemType item_type;
 
 public:
-	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count, unsigned int update_frequency, uint_fast32_t seed) :
-		patches(32), n(n), mcmc_iterations(mcmc_iterations), rng(seed), initial_seed(seed), cache(item_types, item_type_count, n, update_frequency), nb_patches(0)
+	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count, 
+		unsigned int update_frequency, unsigned int update_iterations, float threshold_dryness, float threshold_wetness, 
+		float evaporation, float humidity_lakes, float a_humidity, float sigma_humidity, float loop, uint_fast32_t seed) :
+		patches(32), n(n), mcmc_iterations(mcmc_iterations), rng(seed), initial_seed(seed), 
+		cache(item_types, item_type_count, n, update_frequency, update_iterations, threshold_dryness, threshold_wetness, 
+		evaporation, humidity_lakes, a_humidity, sigma_humidity, loop), nb_patches(0)
 	{ }
 
 	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count, unsigned int update_frequency) :
@@ -621,7 +625,7 @@ public:
 	inline void update_patches(uint64_t current_time) {
 
 		size_t update_iterations = mcmc_iterations/10;
-		int threshold_dryness = 50;
+		float threshold_dryness = 50;
 		float evaporation = 0.7;
 
 
@@ -649,7 +653,7 @@ public:
                     const item& item = p.items[k];
 					/* check if the item is too old; if so, delete it */
 					if (cache.item_types[item.item_type].lifetime != 0 && current_time >= cache.item_types[item.item_type].lifetime + item.creation_time) {
-						//neighborhood[i]->items[k].deletion_time = current_time;
+						//neighborhood[i]->items[k].update_iterations = current_time;
 						if (((float) std::rand())/RAND_MAX < (1.0/ (float) cache.item_types[item.item_type].lifetime)) {
 							p.items.remove(k); k--; continue;
 						}
@@ -665,7 +669,7 @@ public:
 								if (moore_proba>0) moore++;	
 							}
 						}
-						if (rain < threshold_dryness && (float) std::rand()/RAND_MAX < (100-rain)/100*(9-moore)/9*evaporation) {
+						if (rain < cache.threshold_dryness && (float) std::rand()/RAND_MAX < (100-rain)/100*(9-moore)/9*cache.evaporation) {
 							p.items.remove(k); k--; continue;
 						}
 					}
@@ -685,7 +689,7 @@ public:
 			cache, patch_positions, neighborhoods, num_patches_to_sample, n);
 		/* resampling only if the items can vary*/
 		if (cache.varying_item_type_count > 0) { 
-			for (unsigned int i = 0; i < update_iterations; i++) {
+			for (unsigned int i = 0; i < cache.update_iterations; i++) {
 					field.sample(rng, current_time); 
 			}
 		}
