@@ -316,6 +316,7 @@ public:
 		float sigma_humidity = 10;
 		size_t threshold_wetness = 30;
 		float loop = 0;
+		float moore_amplitude = -20;
 
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
@@ -386,7 +387,7 @@ public:
 
 				float log_acceptance_probability = 0.0f;
 				bool new_position_occupied = false;
-				bool moore = false;
+				int moore = 0;
 #if defined(CLIMATE)
 				float log_humidity = 0.0f;
 #endif
@@ -405,20 +406,20 @@ public:
 #if defined(CLIMATE)
 						else if (item_type==items[m].item_type && item_type !=2){
 							float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
-							moore = (moore || (moore_proba>0));							
+							if (moore_proba > 0) moore++;							
 						}
 						else if (item_type==items[m].item_type && item_type ==2){
 						 	float moore_proba = four_interaction_fn(new_position, items[m].location, args);
-						 	moore = (moore || (moore_proba>0));	
+						 	if (moore_proba > 0) moore++;		
 						}
 #else
 						else if (item_type==items[m].item_type){
 							float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
-							moore = (moore || (moore_proba>0));							
+							if (moore_proba > 0) moore++;							
 						}
 #endif
 #if defined(CLIMATE)
-						if (items[m].item_type == 2 && precipitations(new_position, current_time)> threshold_wetness) {
+						if (current_time >0 && items[m].item_type == 2 && precipitations(new_position, current_time)> threshold_wetness) {
 							float* gaussian_args = new float[2];
 							gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
 							log_humidity +=gaussian_interaction_fn(new_position, items[m].location, gaussian_args);
@@ -433,8 +434,8 @@ public:
 					}
 					else {
 						/* Moore interaction function */
-						if (!moore) log_acceptance_probability += -500.0f;
-						else log_acceptance_probability += -20.0f;
+						if (moore==0) log_acceptance_probability += -500.0f;
+						else log_acceptance_probability += moore_amplitude*(9-moore)/9;
 #if !defined(CLIMATE)
 						/* New intensity function */
 						// log_acceptance_probability += cache.intensity(new_position, item_type);
@@ -473,6 +474,15 @@ public:
 				const unsigned int old_item_type = current.items[item_index].item_type;
 				const position old_position = current.items[item_index].location;
 
+#if defined(CLIMATE)
+				if (current_time !=0 and old_item_type!=2) break;
+				int moore = 0;
+				float log_humidity = 0.0f;
+				float* args= new float[0];
+#else
+				if (current_time !=0) break;
+#endif
+
 				patch_type* const* old_neighborhood;
 				uint_fast8_t old_neighborhood_size;
 				if (old_position.x - patch_position_offset.x < n / 2) {
@@ -497,12 +507,35 @@ public:
 				for (uint_fast8_t j = 0; j < old_neighborhood_size; j++) {
 					const auto& items = old_neighborhood[j]->items;
 					for (unsigned int m = 0; m < items.length; m++) {
-						log_acceptance_probability -= cache.interaction(old_position, items[m].location, old_item_type, items[m].item_type);
-						log_acceptance_probability -= cache.interaction(items[m].location, old_position, items[m].item_type, old_item_type);
+						if (current_time==0) {
+							log_acceptance_probability -= cache.interaction(old_position, items[m].location, old_item_type, items[m].item_type);
+							log_acceptance_probability -= cache.interaction(items[m].location, old_position, items[m].item_type, old_item_type);
+						}
+#if defined(CLIMATE)
+						else if (old_item_type==items[m].item_type && old_item_type ==2){
+						 	float moore_proba = four_interaction_fn(old_position, items[m].location, args);
+						 	if (moore_proba > 0) moore++;		
+						}
+						if (current_time >0 && items[m].item_type == 2 && precipitations(old_position, current_time)> threshold_wetness) {
+							float* gaussian_args = new float[2];
+							gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
+							log_humidity +=gaussian_interaction_fn(old_position, items[m].location, gaussian_args);
+						}
+#endif
 					}
 				}
-				log_acceptance_probability -= cache.intensity(old_position, old_item_type);
+#if defined(CLIMATE)
+				if (current_time>0){
+					/* Moore interaction function */
+					if (moore==0) log_acceptance_probability += -500.0f;
+					else log_acceptance_probability += moore_amplitude*(9-moore)/9;
 
+					log_acceptance_probability -= (1-loop)*precipitations(old_position, current_time) + loop*(humidity_lakes* log_humidity + humidity_precipitations* precipitations(old_position, current_time));					
+				}
+				else log_acceptance_probability -= cache.intensity(old_position, old_item_type);
+#else
+				log_acceptance_probability -= cache.intensity(old_position, old_item_type);
+#endif
 				/* add log probability of inverse proposal */
 				log_acceptance_probability += -LOG_ITEM_TYPE_COUNT - LOG_N_SQUARED;
 
