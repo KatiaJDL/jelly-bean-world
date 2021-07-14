@@ -621,8 +621,8 @@ public:
 	inline void update_patches(uint64_t current_time) {
 
 		size_t update_iterations = mcmc_iterations/10;
-		int threshold_dryness = 50;
-		float evaporation = 0.7;
+		// int threshold_dryness = 50;
+		// float evaporation = 0.7;
 
 
         /* Iterate over patches */

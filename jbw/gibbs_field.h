@@ -315,6 +315,7 @@ public:
 		float a_humidity = 2;
 		float sigma_humidity = 10;
 		size_t threshold_wetness = 30;
+		size_t threshold_dryness = 70;
 		float loop = 0;
 		float moore_amplitude = 0;
 
@@ -346,7 +347,7 @@ public:
 			patch_type& current = *neighborhood.top_left_neighborhood[0];
 			if (rng() % 2 == 0) {
 				/* propose creating a new item */
-				unsigned int item_type;
+				int item_type;
 				if (current_time==0) {
 					item_type = rng() % cache.item_type_count;
 				}
@@ -362,199 +363,213 @@ public:
 					item_type = cache.varying_item_types[choice];					
 #endif
 				}
-				else break;
-				position new_position = patch_position_offset + position(rng() % n, rng() % n);
+				else item_type = -1;
+				if (item_type != -1) {
+					position new_position = patch_position_offset + position(rng() % n, rng() % n);
 
-				patch_type* const* new_neighborhood;
-				uint_fast8_t new_neighborhood_size;
-				if (new_position.x - patch_position_offset.x < n / 2) {
-					if (new_position.y - patch_position_offset.y < n / 2) {
-						new_neighborhood = neighborhood.bottom_left_neighborhood;
-						new_neighborhood_size = neighborhood.bottom_left_neighbor_count;
+					patch_type* const* new_neighborhood;
+					uint_fast8_t new_neighborhood_size;
+					if (new_position.x - patch_position_offset.x < n / 2) {
+						if (new_position.y - patch_position_offset.y < n / 2) {
+							new_neighborhood = neighborhood.bottom_left_neighborhood;
+							new_neighborhood_size = neighborhood.bottom_left_neighbor_count;
+						} else {
+							new_neighborhood = neighborhood.top_left_neighborhood;
+							new_neighborhood_size = neighborhood.top_left_neighbor_count;
+						}
 					} else {
-						new_neighborhood = neighborhood.top_left_neighborhood;
-						new_neighborhood_size = neighborhood.top_left_neighbor_count;
+						if (new_position.y - patch_position_offset.y < n / 2) {
+							new_neighborhood = neighborhood.bottom_right_neighborhood;
+							new_neighborhood_size = neighborhood.bottom_right_neighbor_count;
+						} else {
+							new_neighborhood = neighborhood.top_right_neighborhood;
+							new_neighborhood_size = neighborhood.top_right_neighbor_count;
+						}
 					}
-				} else {
-					if (new_position.y - patch_position_offset.y < n / 2) {
-						new_neighborhood = neighborhood.bottom_right_neighborhood;
-						new_neighborhood_size = neighborhood.bottom_right_neighbor_count;
-					} else {
-						new_neighborhood = neighborhood.top_right_neighborhood;
-						new_neighborhood_size = neighborhood.top_right_neighbor_count;
-					}
-				}
 
-				float log_acceptance_probability = 0.0f;
-				bool new_position_occupied = false;
-				int moore = 0;
+					float log_acceptance_probability = 0.0f;
+					bool new_position_occupied = false;
+					int moore = 0;
 #if defined(CLIMATE)
-				float log_humidity = 0.0f;
+					float log_humidity = 0.0f;
 #endif
-				float* args= new float[0];
-				for (uint_fast8_t j = 0; j < new_neighborhood_size; j++) {
-					const auto& items = new_neighborhood[j]->items;
-					for (unsigned int m = 0; m < items.length; m++) {
-						if (items[m].location == new_position) {
-							/* an item already exists at this proposed location */
-							new_position_occupied = true; break;
-						}
-						if (current_time==0) {
-							log_acceptance_probability += cache.interaction(new_position, items[m].location, item_type, items[m].item_type);
-							log_acceptance_probability += cache.interaction(items[m].location, new_position, items[m].item_type, item_type);
-						}
+					float* args= new float[0];
+					for (uint_fast8_t j = 0; j < new_neighborhood_size; j++) {
+						const auto& items = new_neighborhood[j]->items;
+						for (unsigned int m = 0; m < items.length; m++) {
+							if (items[m].location == new_position) {
+								/* an item already exists at this proposed location */
+								new_position_occupied = true; break;
+							}
+							if (current_time==0) {
+								log_acceptance_probability += cache.interaction(new_position, items[m].location, item_type, items[m].item_type);
+								log_acceptance_probability += cache.interaction(items[m].location, new_position, items[m].item_type, item_type);
+							}
 #if defined(CLIMATE)
-						else if (item_type==items[m].item_type && item_type !=2){
-							float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
-							if (moore_proba > 0) moore++;							
-						}
-						else if (item_type==items[m].item_type && item_type ==2){
-						 	float moore_proba = four_interaction_fn(new_position, items[m].location, args);
-						 	if (moore_proba > 0) moore++;		
-						}
+							else if (item_type==items[m].item_type && item_type !=2){
+								float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
+								if (moore_proba > 0) moore++;							
+							}
+							else if (item_type==items[m].item_type && item_type ==2){
+								float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
+								if (moore_proba > 0) moore++;		
+							}
 #else
-						else if (item_type==items[m].item_type){
-							float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
-							if (moore_proba > 0) moore++;							
-						}
+							else if (item_type==items[m].item_type){
+								float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
+								if (moore_proba > 0) moore++;							
+							}
 #endif
 #if defined(CLIMATE)
-						if (current_time >0 && items[m].item_type == 2 && precipitations(new_position, current_time)> threshold_wetness) {
-							float* gaussian_args = new float[2];
-							gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
-							log_humidity +=gaussian_interaction_fn(new_position, items[m].location, gaussian_args);
-						}
+							if (current_time >0 && items[m].item_type == 2 && precipitations(new_position, current_time)> threshold_wetness) {
+								float* gaussian_args = new float[2];
+								gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
+								log_humidity +=gaussian_interaction_fn(new_position, items[m].location, gaussian_args);
+							}
 #endif
+						}
+						if (new_position_occupied) break;
 					}
-					if (new_position_occupied) break;
-				}
-				if (!new_position_occupied) {
-					if (current_time == 0) {
-						log_acceptance_probability += cache.intensity(new_position, item_type);
-					}
-					else {
-						/* Moore interaction function */
-						if (moore==0) log_acceptance_probability += -500.0f;
-						else log_acceptance_probability += moore_amplitude*(9-moore)/9;
-						float r = 0.0;
-						float real_intensity = log(current.items.length) - LOG_N_SQUARED;
-
-#if !defined(CLIMATE)
-						/* New intensity function */
-						// log_acceptance_probability += cache.intensity(new_position, item_type);
-						r = cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
-						//log_acceptance_probability += cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
-						
-#else
-						if (item_type==2) {
-							r = (1-loop)*precipitations(new_position, current_time) + loop*(humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time));
+					if (!new_position_occupied) {
+						if (current_time == 0) {
+							log_acceptance_probability += cache.intensity(new_position, item_type);
 						}
 						else {
-							r = humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time);
-						}
+							/* Moore interaction function */
+							if (moore==0) log_acceptance_probability += -500.0f;
+							else log_acceptance_probability += moore_amplitude*(9-moore)/9;
+							float r = 0.0;
+							float real_intensity = log(current.items.length) - LOG_N_SQUARED;
+
+#if !defined(CLIMATE)
+							/* New intensity function */
+							// log_acceptance_probability += cache.intensity(new_position, item_type);
+							r = cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
+							//log_acceptance_probability += cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
+							
+#else
+							log_humidity = humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time);
+							if (item_type==2) {
+								r = precipitations(new_position, current_time);
+								if (r>threshold_wetness) {
+									r -= loop*log_humidity;
+								} 
+								else r = 0;
+							}
+							else {
+								r = log_humidity;
+							}
 #endif
-						log_acceptance_probability += log(1+r/100) + real_intensity;
+							log_acceptance_probability += log(1+r/100) + real_intensity;
+						}
+
+						/* add log probability of inverse proposal */
+						logarithm.ensure_size((unsigned int) current.items.length + 2);
+						log_acceptance_probability += (float) -logarithm.get((unsigned int) current.items.length + 1);
+
+						/* subtract log probability of forward proposal */
+						log_acceptance_probability -= -LOG_ITEM_TYPE_COUNT - LOG_N_SQUARED;
+
+						/* accept or reject the proposal depending on the computed probability */
+						float random = (float) rng() / rng.max();
+						if (log(random) < log_acceptance_probability) {
+							/* accept the proposal */
+							current.items.add({ item_type, new_position, 0, 0 });
+						}
+					}
+				}
+			} else if (current.items.length > 0) {
+				/* propose deleting an item */
+				unsigned int item_index = rng() % current.items.length;
+				int old_item_type = current.items[item_index].item_type;
+				const position old_position = current.items[item_index].location;
+
+#if defined(CLIMATE)
+				if (current_time !=0) {
+					if (old_item_type!=2) old_item_type = -1;
+				}
+				int moore = 0;
+				float log_humidity = 0.0f;
+				float* args= new float[0];
+#else
+				if (current_time !=0) old_item_type = -1;
+#endif
+				if (old_item_type != -1) {
+					patch_type* const* old_neighborhood;
+					uint_fast8_t old_neighborhood_size;
+					if (old_position.x - patch_position_offset.x < n / 2) {
+						if (old_position.y - patch_position_offset.y < n / 2) {
+							old_neighborhood = neighborhood.bottom_left_neighborhood;
+							old_neighborhood_size = neighborhood.bottom_left_neighbor_count;
+						} else {
+							old_neighborhood = neighborhood.top_left_neighborhood;
+							old_neighborhood_size = neighborhood.top_left_neighbor_count;
+						}
+					} else {
+						if (old_position.y - patch_position_offset.y < n / 2) {
+							old_neighborhood = neighborhood.bottom_right_neighborhood;
+							old_neighborhood_size = neighborhood.bottom_right_neighbor_count;
+						} else {
+							old_neighborhood = neighborhood.top_right_neighborhood;
+							old_neighborhood_size = neighborhood.top_right_neighbor_count;
+						}
 					}
 
+					float log_acceptance_probability = 0.0f;
+					for (uint_fast8_t j = 0; j < old_neighborhood_size; j++) {
+						const auto& items = old_neighborhood[j]->items;
+						for (unsigned int m = 0; m < items.length; m++) {
+							if (current_time==0) {
+								log_acceptance_probability -= cache.interaction(old_position, items[m].location, old_item_type, items[m].item_type);
+								log_acceptance_probability -= cache.interaction(items[m].location, old_position, items[m].item_type, old_item_type);
+							}
+#if defined(CLIMATE)
+							else if (old_item_type==items[m].item_type && old_item_type ==2){
+								float moore_proba = moore_interaction_fn(old_position, items[m].location, args);
+								if (moore_proba > 0) moore++;		
+							}
+							if (current_time >0 && items[m].item_type == 2 && precipitations(old_position, current_time)> threshold_wetness) {
+								float* gaussian_args = new float[2];
+								gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
+								log_humidity +=gaussian_interaction_fn(old_position, items[m].location, gaussian_args);
+							}
+#endif
+						}
+					}
+#if defined(CLIMATE)
+					if (current_time>0){
+						/* Moore interaction function */
+						if (moore == 0) log_acceptance_probability += -500.0f;
+						else log_acceptance_probability -= moore_amplitude*(9-moore)/9;
+
+						float real_intensity = log(current.items.length) - LOG_N_SQUARED;
+						float r = precipitations(old_position, current_time);
+						if (r>threshold_dryness) {
+							r -= loop*log_humidity;
+						} 
+						else r = 0;
+						log_acceptance_probability -= log(1+r/100) - real_intensity;					
+					}
+					else {
+						log_acceptance_probability -= cache.intensity(old_position, old_item_type);
+						if (moore!=0) std::cout << log_acceptance_probability << std::endl; 
+					}
+#else
+					log_acceptance_probability -= cache.intensity(old_position, old_item_type);
+#endif
 					/* add log probability of inverse proposal */
-					logarithm.ensure_size((unsigned int) current.items.length + 2);
-					log_acceptance_probability += (float) -logarithm.get((unsigned int) current.items.length + 1);
+					log_acceptance_probability += -LOG_ITEM_TYPE_COUNT - LOG_N_SQUARED;
 
 					/* subtract log probability of forward proposal */
-					log_acceptance_probability -= -LOG_ITEM_TYPE_COUNT - LOG_N_SQUARED;
+					logarithm.ensure_size((unsigned int) current.items.length + 1);
+					log_acceptance_probability -= (float) -logarithm.get((unsigned int) current.items.length);
 
 					/* accept or reject the proposal depending on the computed probability */
 					float random = (float) rng() / rng.max();
 					if (log(random) < log_acceptance_probability) {
 						/* accept the proposal */
-						current.items.add({ item_type, new_position, 0, 0 });
+						current.items.remove(item_index);
 					}
-				}
-			} else if (current.items.length > 0 && current_time==0) {
-				/* propose deleting an item */
-				unsigned int item_index = rng() % current.items.length;
-				const unsigned int old_item_type = current.items[item_index].item_type;
-				const position old_position = current.items[item_index].location;
-
-#if defined(CLIMATE)
-				if (current_time !=0 and old_item_type!=2) break;
-				int moore = 0;
-				float log_humidity = 0.0f;
-				float* args= new float[0];
-#else
-				if (current_time !=0) break;
-#endif
-
-				patch_type* const* old_neighborhood;
-				uint_fast8_t old_neighborhood_size;
-				if (old_position.x - patch_position_offset.x < n / 2) {
-					if (old_position.y - patch_position_offset.y < n / 2) {
-						old_neighborhood = neighborhood.bottom_left_neighborhood;
-						old_neighborhood_size = neighborhood.bottom_left_neighbor_count;
-					} else {
-						old_neighborhood = neighborhood.top_left_neighborhood;
-						old_neighborhood_size = neighborhood.top_left_neighbor_count;
-					}
-				} else {
-					if (old_position.y - patch_position_offset.y < n / 2) {
-						old_neighborhood = neighborhood.bottom_right_neighborhood;
-						old_neighborhood_size = neighborhood.bottom_right_neighbor_count;
-					} else {
-						old_neighborhood = neighborhood.top_right_neighborhood;
-						old_neighborhood_size = neighborhood.top_right_neighbor_count;
-					}
-				}
-
-				float log_acceptance_probability = 0.0f;
-				for (uint_fast8_t j = 0; j < old_neighborhood_size; j++) {
-					const auto& items = old_neighborhood[j]->items;
-					for (unsigned int m = 0; m < items.length; m++) {
-						if (current_time==0) {
-							log_acceptance_probability -= cache.interaction(old_position, items[m].location, old_item_type, items[m].item_type);
-							log_acceptance_probability -= cache.interaction(items[m].location, old_position, items[m].item_type, old_item_type);
-						}
-#if defined(CLIMATE)
-						else if (old_item_type==items[m].item_type && old_item_type ==2){
-						 	float moore_proba = four_interaction_fn(old_position, items[m].location, args);
-						 	if (moore_proba > 0) moore++;		
-						}
-						if (current_time >0 && items[m].item_type == 2 && precipitations(old_position, current_time)> threshold_wetness) {
-							float* gaussian_args = new float[2];
-							gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
-							log_humidity +=gaussian_interaction_fn(old_position, items[m].location, gaussian_args);
-						}
-#endif
-					}
-				}
-#if defined(CLIMATE)
-				if (current_time>0){
-					/* Moore interaction function */
-					if (moore==0) log_acceptance_probability += -500.0f;
-					else log_acceptance_probability -= moore_amplitude*(9-moore)/9;
-
-					float real_intensity = log(current.items.length) - LOG_N_SQUARED;
-					float r = (1-loop)*precipitations(old_position, current_time) + loop*(humidity_lakes* log_humidity + humidity_precipitations* precipitations(old_position, current_time));
-					log_acceptance_probability -= log(1+r/100) - real_intensity;					
-				}
-				else {
-					log_acceptance_probability -= cache.intensity(old_position, old_item_type);
-					//std::cout << log_acceptance_probability << std::endl; 
-				}
-#else
-				log_acceptance_probability -= cache.intensity(old_position, old_item_type);
-#endif
-				/* add log probability of inverse proposal */
-				log_acceptance_probability += -LOG_ITEM_TYPE_COUNT - LOG_N_SQUARED;
-
-				/* subtract log probability of forward proposal */
-				logarithm.ensure_size((unsigned int) current.items.length + 1);
-				log_acceptance_probability -= (float) -logarithm.get((unsigned int) current.items.length);
-
-				/* accept or reject the proposal depending on the computed probability */
-				float random = (float) rng() / rng.max();
-				if (log(random) < log_acceptance_probability) {
-					/* accept the proposal */
-					current.items.remove(item_index);
 				}
 			}
 #endif /* SAMPLING_METHOD == MH_SAMPLING */
