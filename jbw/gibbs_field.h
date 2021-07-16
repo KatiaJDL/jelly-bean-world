@@ -452,7 +452,7 @@ public:
 							log_humidity = humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time);
 							if (item_type==2) {
 								r = precipitations(new_position, current_time);
-								if (r>threshold_wetness) && log_humidity < threshold_humidity) {
+								if (r>threshold_wetness && log_humidity < threshold_humidity) {
 									r -= loop*log_humidity;
 								} 
 								else r = 0;
