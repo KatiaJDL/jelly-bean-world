@@ -311,13 +311,14 @@ public:
 	void sample(RNGType& rng, uint64_t current_time = 0) {
 
 		float humidity_precipitations = 0;
-		float humidity_lakes = 1;
+		float humidity_lakes = 1.5;
 		float a_humidity = 2;
 		float sigma_humidity = 10;
 		size_t threshold_wetness = 30;
 		size_t threshold_dryness = 70;
-		float loop = 0;
-		float moore_amplitude = 0;
+		float loop = 0.46;
+		float moore_amplitude = -3.5;
+		float threshold_humidity = 1500;
 
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
@@ -353,7 +354,7 @@ public:
 				}
 				else if (cache.varying_item_type_count > 0) {
 #if defined(CLIMATE)
-					unsigned int choice = rng() % cache.varying_item_type_count+1;
+					unsigned int choice = rng() % (cache.varying_item_type_count+1);
 					if (choice < cache.varying_item_type_count) {
 						item_type = cache.varying_item_types[choice];
 					}
@@ -421,7 +422,7 @@ public:
 							}
 #endif
 #if defined(CLIMATE)
-							if (current_time >0 && items[m].item_type == 2 && precipitations(new_position, current_time)> threshold_wetness) {
+							if (current_time >0 && items[m].item_type == 2) {
 								float* gaussian_args = new float[2];
 								gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
 								log_humidity +=gaussian_interaction_fn(new_position, items[m].location, gaussian_args);
@@ -451,7 +452,7 @@ public:
 							log_humidity = humidity_lakes* log_humidity + humidity_precipitations* precipitations(new_position, current_time);
 							if (item_type==2) {
 								r = precipitations(new_position, current_time);
-								if (r>threshold_wetness) {
+								if (r>threshold_wetness) && log_humidity < threshold_humidity) {
 									r -= loop*log_humidity;
 								} 
 								else r = 0;
@@ -528,7 +529,7 @@ public:
 								float moore_proba = moore_interaction_fn(old_position, items[m].location, args);
 								if (moore_proba > 0) moore++;		
 							}
-							if (current_time >0 && items[m].item_type == 2 && precipitations(old_position, current_time)> threshold_wetness) {
+							if (current_time >0 && items[m].item_type == 2) {
 								float* gaussian_args = new float[2];
 								gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
 								log_humidity +=gaussian_interaction_fn(old_position, items[m].location, gaussian_args);
@@ -544,7 +545,7 @@ public:
 
 						float real_intensity = log(current.items.length) - LOG_N_SQUARED;
 						float r = precipitations(old_position, current_time);
-						if (r>threshold_dryness) {
+						if (r<threshold_dryness) {
 							r -= loop*log_humidity;
 						} 
 						else r = 0;
