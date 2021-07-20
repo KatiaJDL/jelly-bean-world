@@ -318,7 +318,7 @@ public:
 		size_t threshold_dryness = 70;
 		float loop = 0.46;
 		float moore_amplitude = -3.5;
-		float threshold_humidity = 1500;
+		float threshold_humidity = 100;
 
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
@@ -545,7 +545,7 @@ public:
 
 						float real_intensity = log(current.items.length) - LOG_N_SQUARED;
 						float r = precipitations(old_position, current_time);
-						if (r<threshold_dryness) {
+						if (r<threshold_dryness && log_humidity < threshold_humidity) {
 							r -= loop*log_humidity;
 						} 
 						else r = 0;
