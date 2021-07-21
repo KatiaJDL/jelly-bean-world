@@ -426,11 +426,13 @@ public:
 								float* gaussian_args = new float[2];
 								gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
 								log_humidity +=gaussian_interaction_fn(new_position, items[m].location, gaussian_args);
+								delete(gaussian_args);
 							}
 #endif
 						}
 						if (new_position_occupied) break;
 					}
+					delete(args);
 					if (!new_position_occupied) {
 						if (current_time == 0) {
 							log_acceptance_probability += cache.intensity(new_position, item_type);
@@ -533,10 +535,12 @@ public:
 								float* gaussian_args = new float[2];
 								gaussian_args[0] = sigma_humidity; gaussian_args[1] = a_humidity;
 								log_humidity +=gaussian_interaction_fn(old_position, items[m].location, gaussian_args);
+								delete(gaussian_args);
 							}
 #endif
 						}
 					}
+					delete(args);
 #if defined(CLIMATE)
 					if (current_time>0){
 						/* Moore interaction function */
