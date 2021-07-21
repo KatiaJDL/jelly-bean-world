@@ -22,6 +22,8 @@
 #define REGENERATION
 
 #include <iostream>
+#include <fstream>
+#include <ctime>
 
 #include <stdio.h>
 #include <Python.h>
@@ -42,6 +44,19 @@ using namespace core;
 /* forward declarations */
 template<typename SimulatorData> class simulator;
 struct agent_state;
+
+/* Transform date for log files */
+std::string datetime(tm* timeinfo)
+{
+    // struct tm * timeinfo;
+    char buffer[80];
+
+    // time (&rawtime);
+    // timeinfo = localtime(&rawtime);
+
+    strftime(buffer,80,"%d-%m-%Y_%H-%M-%S",timeinfo);
+    return std::string(buffer);
+}
 
 /** Represents all possible directions of motion in the environment. */
 enum class direction : uint8_t { UP = 0, DOWN = 1, LEFT = 2, RIGHT = 3, COUNT };
@@ -1395,6 +1410,9 @@ class simulator {
     /* Lock for the requested_moves map, used to prevent simultaneous updates. */
     std::mutex requested_move_lock;
 
+    /* Storing the start date for log files */
+    struct tm* date;
+
     /**
      * Counter for how many agents have acted and how many semaphores have
      * signaled during each time step. This counter is used to force the
@@ -1429,23 +1447,13 @@ public:
             config.item_types.data,
             (unsigned int) config.item_types.length, config.update_frequency, seed),
         agents(32), semaphores(8), id_counter(1), requested_moves(32, alloc_position_keys),
-        acted_agent_count(0), active_agent_count(0), data(data), time(0)
+        acted_agent_count(0), active_agent_count(0), data(data), time(0), date(0)
     {
         if (!init(scent_model, (double) config.diffusion_param,
                 (double) config.decay_param, config.patch_size, config.deleted_item_lifetime)) {
             fprintf(stderr, "simulator ERROR: Unable to initialize scent_model.\n");
             exit(EXIT_FAILURE);
         }
-    }
-
-    inline int test_python() {
-
-	    Py_Initialize();
-
-	    PyRun_SimpleString("print('Hello World from Embedded Python!!!')");
-
-        return 0;
-
     }
 
     /**
@@ -2225,7 +2233,13 @@ private:
                 }
             }
             std::cout << "[" << banana << ", " << lakes << ", " << jellybean << "]," << std::endl;
-
+            std::ofstream myFile("Log/items_"+datetime(date)+".txt", std::ios::app);
+            if (myFile) {
+                myFile << "[" << banana << ", " << lakes << ", " << jellybean << "]" << std::endl;
+            }
+            else {
+            std::cout << "ERROR: Impossible to open the log file." << std::endl;
+            }
             // std::cout << time/config.update_frequency << std::endl;
             world.update_patches(time);
         }  
@@ -2325,6 +2339,11 @@ status init(simulator<SimulatorData>& sim,
     sim.acted_agent_count = 0;
     sim.active_agent_count = 0;
     sim.id_counter = 1;
+    
+    time_t rawtime;
+    time (&rawtime);
+    sim.date = localtime(&rawtime);
+    
     if (!init(sim.data, data)) {
         return status::OUT_OF_MEMORY;
     } else if (!hash_map_init(sim.agents, 32)) {
