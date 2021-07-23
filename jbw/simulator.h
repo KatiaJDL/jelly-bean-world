@@ -533,7 +533,16 @@ inline bool init(
     config.humidity_precipitations = humidity_precipitations;
     config.moore_amplitude = moore_amplitude;
     config.threshold_humidity = threshold_humidity;
+
+    std::cout << "init climate configuration" << std::endl;
+    std::cout << loop << std::endl;
     
+    return true;
+}
+
+
+inline bool init(config_climate& config)
+{
     return true;
 }
 
@@ -597,9 +606,18 @@ struct simulator_config {
     unsigned int update_frequency;
     unsigned int update_iterations;
 
+    /* parameters for climate dynamics */
     bool is_climate;
 
-    config_climate climate;
+    float threshold_dryness;
+    float threshold_wetness;
+	float humidity_lakes;
+	float a_humidity;
+	float sigma_humidity;
+	float loop;
+    float humidity_precipitations;
+    float moore_amplitude;
+    float threshold_humidity;
 
     /* parameters for scent diffusion */
     float decay_param, diffusion_param;
@@ -634,6 +652,16 @@ struct simulator_config {
         core::swap(first.diffusion_param, second.diffusion_param);
         core::swap(first.deleted_item_lifetime, second.deleted_item_lifetime);
         core::swap(first.update_frequency, second.update_frequency);
+        core::swap(first.update_iterations, second.update_iterations);
+        core::swap(first.threshold_dryness, second.threshold_dryness);
+        core::swap(first.threshold_wetness, second.threshold_wetness);
+        core::swap(first.humidity_lakes, second.humidity_lakes);
+        core::swap(first.a_humidity, second.a_humidity);
+        core::swap(first.sigma_humidity, second.sigma_humidity);
+        core::swap(first.loop, second.loop);
+        core::swap(first.humidity_precipitations, second.humidity_precipitations);
+        core::swap(first.moore_amplitude, second.moore_amplitude);
+        core::swap(first.threshold_humidity, second.threshold_humidity);
    }
 
     static inline void free(simulator_config& config) {
@@ -679,6 +707,16 @@ private:
         diffusion_param = src.diffusion_param;
         deleted_item_lifetime = src.deleted_item_lifetime;
         update_frequency = src.update_frequency;
+        update_iterations = src.update_iterations;
+        threshold_dryness = src.threshold_dryness;
+        threshold_wetness = src.threshold_wetness;
+        humidity_lakes = src.humidity_lakes;
+        a_humidity = src.a_humidity;
+        sigma_humidity = src.sigma_humidity;
+        loop = src.loop;
+        humidity_precipitations = src.humidity_precipitations;
+        moore_amplitude = src.moore_amplitude;
+        threshold_humidity = src.threshold_humidity;
         return true;
     }
 
@@ -730,7 +768,17 @@ bool read(simulator_config& config, Stream& in) {
      || !read(config.patch_size, in)
      || !read(config.mcmc_iterations, in)
      || !read(config.item_types.length, in)
-     || !read(config.update_frequency, in))
+     || !read(config.update_frequency, in)
+     || !read(config.update_iterations, in)
+     || !read(config.threshold_dryness, in)
+     || !read(config.threshold_wetness, in)
+     || !read(config.humidity_lakes, in)
+     || !read(config.a_humidity, in)
+     || !read(config.sigma_humidity, in)
+     || !read(config.loop, in)
+     || !read(config.humidity_precipitations, in)
+     || !read(config.moore_amplitude, in)
+     || !read(config.threshold_humidity, in))
         return false;
 
     config.item_types.data = (item_properties*) malloc(max((size_t) 1, sizeof(item_properties) * config.item_types.length));
@@ -783,7 +831,17 @@ bool write(const simulator_config& config, Stream& out) {
         && write(config.decay_param, out)
         && write(config.diffusion_param, out)
         && write(config.deleted_item_lifetime, out)
-        && write(config.update_frequency, out);
+        && write(config.update_frequency, out)
+        && write(config.update_iterations, out)
+        && write(config.threshold_dryness, out)
+        && write(config.threshold_wetness, out)
+        && write(config.humidity_lakes, out)
+        && write(config.a_humidity, out)
+        && write(config.sigma_humidity, out)
+        && write(config.loop, out)
+        && write(config.humidity_precipitations, out)
+        && write(config.moore_amplitude, out)
+        && write(config.threshold_humidity, out);
 }
 
 /**
@@ -1560,11 +1618,9 @@ public:
             config.mcmc_iterations,
             config.item_types.data,
             (unsigned int) config.item_types.length, config.update_frequency, config.update_iterations,
-            config.climate.threshold_dryness, config.climate.threshold_wetness, 
-		    config.climate.humidity_lakes, 
-            config.climate.a_humidity, config.climate.sigma_humidity, 
-            config.climate.loop, config.climate.humidity_precipitations,
-            config.climate.moore_amplitude, config.climate.threshold_humidity, seed),
+            config.threshold_dryness, config.threshold_wetness, config.humidity_lakes, 
+            config.a_humidity, config.sigma_humidity, config.loop, config.humidity_precipitations,
+            config.moore_amplitude, config.threshold_humidity, seed),
         agents(32), semaphores(8), id_counter(1), requested_moves(32, alloc_position_keys),
         acted_agent_count(0), active_agent_count(0), data(data), time(0)
     {
@@ -2493,7 +2549,10 @@ status init(simulator<SimulatorData>& sim,
     } else if (!init(sim.world, sim.config.patch_size,
             sim.config.mcmc_iterations,
             sim.config.item_types.data,
-            (unsigned int) sim.config.item_types.length, sim.config.update_frequency, seed)) {
+            (unsigned int) sim.config.item_types.length, sim.config.update_frequency, sim.config.update_iterations, 
+            sim.config.threshold_dryness, sim.config.threshold_wetness, sim.config.humidity_lakes, 
+		    sim.config.a_humidity, sim.config.sigma_humidity, sim.config.loop, sim.config.humidity_precipitations, 
+            sim.config.moore_amplitude, sim.config.threshold_humidity, seed)) {
         free(sim.config); free(sim.data);
         free(sim.agents); free(sim.semaphores);
         free(sim.requested_moves); free(sim.scent_model);
@@ -2586,7 +2645,10 @@ bool read(simulator<SimulatorData>& sim, Stream& in, const SimulatorData& data)
         free(sim.config); return false;
     }
 
-    if (!read(sim.world, in, sim.config.item_types.data, (unsigned int) sim.config.item_types.length, sim.config.update_frequency, sim.agents)) {
+    if (!read(sim.world, in, sim.config.item_types.data, (unsigned int) sim.config.item_types.length, sim.config.update_frequency, sim.config.update_iterations, 
+            sim.config.threshold_dryness, sim.config.threshold_wetness, sim.config.humidity_lakes, 
+		    sim.config.a_humidity, sim.config.sigma_humidity, sim.config.loop, sim.config.humidity_precipitations, 
+            sim.config.moore_amplitude, sim.config.threshold_humidity, sim.agents)) {
         for (auto entry : sim.agents) {
             free(*entry.value); free(entry.value);
         }

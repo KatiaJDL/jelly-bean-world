@@ -905,10 +905,9 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
       &collision_policy, &config.agent_field_of_view, &config.decay_param,
       &config.diffusion_param, &config.deleted_item_lifetime, 
       &config.update_frequency, &config.update_iterations, &py_climate, 
-      &config.climate.threshold_dryness, &config.climate.threshold_wetness, 
-      &config.climate.humidity_lakes, &config.climate.a_humidity, 
-      &config.climate.sigma_humidity, &config.climate.loop, &config.climate.humidity_precipitations,
-      &config.climate.moore_amplitude, &config.climate.threshold_humidity,
+      &config.threshold_dryness, &config.threshold_wetness, &config.humidity_lakes, 
+      &config.a_humidity, &config.sigma_humidity, &config.loop, 
+      &config.humidity_precipitations, &config.moore_amplitude, &config.threshold_humidity, 
       &py_callback)) {
         fprintf(stderr, "Invalid argument types in the call to 'simulator_c.new'.\n");
         return NULL;

@@ -20,7 +20,6 @@
 #define CLIMATE
 
 #include <stdio.h>
-#include <Python.h>
 
 #include <core/random.h>
 #include <math/log.h>
@@ -78,9 +77,10 @@ struct gibbs_field_cache
 #endif
 
 	gibbs_field_cache(const ItemType* item_types, unsigned int item_type_count, 
-					unsigned int n, unsigned int update_frequency, float update_iterations, 
-					float threshold_dryness, float threshold_wetness, 
-					float humidity_lakes, float a_humidity, float sigma_humidity, float loop) :
+					unsigned int n, unsigned int update_frequency, 
+					unsigned int update_iterations, float threshold_dryness, 
+					float threshold_wetness, float humidity_lakes, float a_humidity, 
+					float sigma_humidity, float loop) :
 		two_n(2*n), four_n(4*n), item_types(item_types), item_type_count(item_type_count), 
 		update_frequency(update_frequency), update_iterations(update_iterations), threshold_dryness(threshold_dryness), 
 		threshold_wetness(threshold_wetness), humidity_lakes(humidity_lakes),
@@ -249,18 +249,33 @@ private:
 	}
 
 	template<typename A>
-	friend bool init(gibbs_field_cache<A>&, const A*, unsigned int, unsigned int, unsigned int);
+	friend bool init(gibbs_field_cache<A>&, const A*, unsigned int, unsigned int, unsigned int,
+		unsigned int, float, float, float, float, float, float, float, float, float);
 };
 
 template<typename ItemType>
 bool init(gibbs_field_cache<ItemType>& cache,
-		const ItemType* item_types, unsigned int item_type_count, unsigned int n, unsigned int update_frequency)
+		const ItemType* item_types, unsigned int item_type_count, unsigned int n, 
+		unsigned int update_frequency, unsigned int update_iterations, float threshold_dryness, 
+		float threshold_wetness, float humidity_lakes, float a_humidity, float sigma_humidity,
+		float loop, float humidity_precipitations, float moore_amplitude, float threshold_humidity)
 {
 	cache.two_n = 2*n;
 	cache.four_n = 4*n;
 	cache.item_types = item_types;
 	cache.item_type_count = item_type_count;
 	cache.update_frequency = update_frequency;
+	cache.update_iterations = update_iterations;
+	cache.threshold_dryness=threshold_dryness;
+    cache.threshold_wetness=threshold_wetness;
+	cache.humidity_lakes=humidity_lakes;
+	cache.a_humidity=a_humidity;
+	cache.sigma_humidity=sigma_humidity;
+	cache.loop=loop;
+    cache.humidity_precipitations=humidity_precipitations;
+    cache.moore_amplitude=moore_amplitude;
+    cache.threshold_humidity=threshold_humidity;
+
 	return cache.init_helper(n);
 }
 
@@ -339,6 +354,16 @@ public:
 		// float humidity_precipitations = 0;
 		// float moore_amplitude = -3.5;
 		// float threshold_humidity = 100;
+		// std::cout << "print parameters" << std::endl;
+		// std::cout << cache.humidity_lakes << std::endl;
+		// std::cout << cache.a_humidity << std::endl;
+		// std::cout << cache.sigma_humidity << std::endl;
+		// std::cout << cache.threshold_wetness << std::endl;
+		// std::cout << cache.threshold_dryness << std::endl;
+		// std::cout << cache.loop << std::endl;
+		// std::cout << cache.humidity_precipitations << std::endl;
+		// std::cout << cache.moore_amplitude << std::endl;
+		// std::cout << cache.threshold_humidity << std::endl;
 
 #if SAMPLING_METHOD == MH_SAMPLING
 		log_cache<float>& logarithm = log_cache<float>::instance();
