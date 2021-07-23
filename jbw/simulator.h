@@ -22,9 +22,10 @@
 #define REGENERATION
 
 #include <iostream>
+#include <fstream>
+#include <ctime>
 
 #include <stdio.h>
-#include <Python.h>
 
 #include <core/array.h>
 #include <core/utility.h>
@@ -42,6 +43,19 @@ using namespace core;
 /* forward declarations */
 template<typename SimulatorData> class simulator;
 struct agent_state;
+
+/* Transform date for log files */
+std::string datetime(tm* timeinfo)
+{
+    // struct tm * timeinfo;
+    char buffer[80];
+
+    // time (&rawtime);
+    // timeinfo = localtime(&rawtime);
+
+    strftime(buffer,80,"%d-%m-%Y_%H-%M-%S",timeinfo);
+    return std::string(buffer);
+}
 
 /** Represents all possible directions of motion in the environment. */
 enum class direction : uint8_t { UP = 0, DOWN = 1, LEFT = 2, RIGHT = 3, COUNT };
@@ -1497,6 +1511,9 @@ class simulator {
     /* Lock for the requested_moves map, used to prevent simultaneous updates. */
     std::mutex requested_move_lock;
 
+    /* Storing the start date for log files */
+    struct tm* date;
+
     /**
      * Counter for how many agents have acted and how many semaphores have
      * signaled during each time step. This counter is used to force the
@@ -2303,26 +2320,8 @@ private:
 #if defined(REGENERATION)
         if (config.update_frequency != 0 && time%config.update_frequency==0) {
             
-            int banana = 0;
-            int jellybean = 0;
-            int lakes = 0;
-            
-            for(auto i = world.patches.begin(); i!=world.patches.end(); ++i) {
-			    array_map<int64_t, patch<patch_data>>& row = world.patches.values[(long int) i.position];
-					
-                for(auto j = row.begin(); j != row.end(); ++j) {
-                    patch_type& p = row.values[(long int) j.position];
-                    
-                    for (size_t k = 0; k < p.items.length; k++) {
-                        if (p.items[k].item_type==1) banana ++;
-                        if (p.items[k].item_type==2) lakes ++;
-                        if (p.items[k].item_type==3) jellybean ++;
-                    }
-                }
-            }
-            std::cout << "[" << banana << ", " << lakes << ", " << jellybean << "]," << std::endl;
+            log();
 
-            // std::cout << time/config.update_frequency << std::endl;
             world.update_patches(time);
         }  
 #endif
@@ -2344,6 +2343,40 @@ private:
         on_step((simulator<SimulatorData>*) this, (const hash_map<uint64_t, agent_state*>&) agents, time);
     }
 
+    /* Print and save log files for the number of items */
+    inline void log() {
+        std::vector<int> nb_items(config.item_types.length);
+        for (int j =0; j < config.item_types.length; j++) {
+            nb_items[j] = 0;
+        }
+        
+        for(auto i = world.patches.begin(); i!=world.patches.end(); ++i) {
+            array_map<int64_t, patch<patch_data>>& row = world.patches.values[(long int) i.position];
+                
+            for(auto j = row.begin(); j != row.end(); ++j) {
+                patch_type& p = row.values[(long int) j.position];
+                
+                for (size_t k = 0; k < p.items.length; k++) {
+                    for (int j =0; j < config.item_types.length; j++) {
+                        if (p.items[k].item_type==j) nb_items[j] ++;
+                    }
+                }
+            }
+        }
+        std::ofstream myFile("Log/items_"+datetime(date)+".txt", std::ios::app);
+        if (myFile) {
+            myFile << "[" << nb_items[0];
+            if (config.item_types.length > 1) {
+                for (int j = 0; j < config.item_types.length; j++) {
+                    myFile << ", " << nb_items[j] ;
+                }
+            }
+            myFile << "]" << std::endl;
+        }
+        else {
+            std::cout << "ERROR: Impossible to open the log file." << std::endl;
+        }
+    }
 
     /* Precondition: This thread has all agent locks, which it will release. */
     inline void update_agent_scent_and_vision() {
@@ -2421,6 +2454,11 @@ status init(simulator<SimulatorData>& sim,
     sim.acted_agent_count = 0;
     sim.active_agent_count = 0;
     sim.id_counter = 1;
+
+    time_t rawtime;
+    time(&rawtime);
+    sim.date = localtime(&rawtime);
+
     if (!init(sim.data, data)) {
         return status::OUT_OF_MEMORY;
     } else if (!hash_map_init(sim.agents, 32)) {

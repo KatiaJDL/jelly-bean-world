@@ -625,9 +625,6 @@ public:
 	inline void update_patches(uint64_t current_time) {
 
 		size_t update_iterations = mcmc_iterations/10;
-		float threshold_dryness = 50;
-		float evaporation = 0.7;
-
 
         /* Iterate over patches */
 		/* get the neighborhoods of all the patches */
@@ -658,22 +655,6 @@ public:
 							p.items.remove(k); k--; continue;
 						}
 					}
-#if defined(CLIMATE)
-					if (item.item_type == 2) {
-						float rain = precipitations(item.location, current_time);
-						float* args= new float[0];
-						int moore = 0;
-						for (unsigned int j = 0; j < p.items.length; j++) {
-							if (item.item_type == 2) {
-								float moore_proba = moore_interaction_fn(item.location, p.items[j].location, args);
-								if (moore_proba>0) moore++;	
-							}
-						}
-						if (rain < cache.threshold_dryness && (float) std::rand()/RAND_MAX < (100-rain)/100*(9-moore)/9*cache.evaporation) {
-							p.items.remove(k); k--; continue;
-						}
-					}
-#endif
                 }
 
                 /* get the neighborhoods of all the patches */

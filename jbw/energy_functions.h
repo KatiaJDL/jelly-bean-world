@@ -454,12 +454,15 @@ inline bool is_custom(const regeneration_function function) {
 
 float precipitations(const position pos, const uint64_t time) {
 	// Between 0 and 100
-	float period = 200;
-	return 50 + 45*sin(2*3.14*time/period);
+	// float period = 600;
+	// return 50 + 45*sin(2*3.14*time/period);
 	// return 20;
-	// if (time % 400 < 100) return 80;
-	// else return 25;
-	
+	if (time < 2000) return 5;
+	else {
+		if (time < 5000) return 80;
+		else return 5;
+	}
+	// return 80;
 }
 
 } /* namespace jbw */
