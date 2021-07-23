@@ -2239,9 +2239,10 @@ private:
 
     /* Print and save log files for the number of items */
     inline void log() {
-        int banana = 0;
-        int jellybean = 0;
-        int lakes = 0;
+        std::vector<int> nb_items(config.item_types.length);
+        for (int j =0; j < config.item_types.length; j++) {
+            nb_items[j] = 0;
+        }
         
         for(auto i = world.patches.begin(); i!=world.patches.end(); ++i) {
             array_map<int64_t, patch<patch_data>>& row = world.patches.values[(long int) i.position];
@@ -2250,16 +2251,19 @@ private:
                 patch_type& p = row.values[(long int) j.position];
                 
                 for (size_t k = 0; k < p.items.length; k++) {
-                    if (p.items[k].item_type==1) banana ++;
-                    if (p.items[k].item_type==2) lakes ++;
-                    if (p.items[k].item_type==3) jellybean ++;
+                    for (int j =0; j < config.item_types.length; j++) {
+                        if (p.items[k].item_type==j) nb_items[j] ++;
+                    }
                 }
             }
         }
-        // std::cout << "[" << banana << ", " << lakes << ", " << jellybean << "]," << std::endl;
         std::ofstream myFile("Log/items_"+datetime(date)+".txt", std::ios::app);
         if (myFile) {
-            myFile << "[" << banana << ", " << lakes << ", " << jellybean << "]" << std::endl;
+            myFile << "[";
+            for (int j = 0; j < config.item_types.length; j++) {
+                myFile << nb_items[j] << ",";
+            }
+            myFile << "]" << std::endl;
         }
         else {
             std::cout << "ERROR: Impossible to open the log file." << std::endl;
