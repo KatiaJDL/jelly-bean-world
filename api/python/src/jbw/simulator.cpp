@@ -898,7 +898,7 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
     PyObject* py_climate;
     PyObject* py_callback;
     if (!PyArg_ParseTuple(
-      args, "IIOOOIIIIIOOIfffIIIOfffffffO", &seed, &config.max_steps_per_movement,
+      args, "IIOOOIIIIIOOIfffIIIOfffffffffO", &seed, &config.max_steps_per_movement,
       &py_allowed_movement_directions, &py_allowed_turn_directions, &py_no_op_allowed,
       &config.scent_dimension, &config.color_dimension, &config.vision_range,
       &config.patch_size, &config.mcmc_iterations, &py_items, &py_agent_color,
@@ -906,8 +906,9 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
       &config.diffusion_param, &config.deleted_item_lifetime, 
       &config.update_frequency, &config.update_iterations, &py_climate, 
       &config.climate.threshold_dryness, &config.climate.threshold_wetness, 
-      &config.climate.evaporation, &config.climate.humidity_lakes, 
-      &config.climate.a_humidity, &config.climate.sigma_humidity, &config.climate.loop,
+      &config.climate.humidity_lakes, &config.climate.a_humidity, 
+      &config.climate.sigma_humidity, &config.climate.loop, &config.climate.humidity_precipitations,
+      &config.climate.moore_amplitude, &config.climate.threshold_humidity,
       &py_callback)) {
         fprintf(stderr, "Invalid argument types in the call to 'simulator_c.new'.\n");
         return NULL;

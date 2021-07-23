@@ -176,22 +176,21 @@ class ConfigClimate(object):
     "Represent a configuration for a variable environment and climate dynamics"
     def __init__(
         self,
-        threshold_dryness = 50,
+        threshold_dryness = 70,
         threshold_wetness = 30,
-        evaporation = 0.7,
-		humidity_lakes = 1,
+		humidity_lakes = 1.5,
 		a_humidity = 2,
 		sigma_humidity = 10,
-		loop = 0
+		loop = 0.46,
+        humidity_precipitations = 0,
+        moore_amplitude = -3.5,
+        threshold_humidity = 100
     ):
         """Creates a new configuration for an environment with climate dynamics.
 
         Arguments:
           threshold_dryness:           Above, no deletion of water cells.
           threshold_wetness:           Under it, no creation of water cells.
-          evaporation:                 Probability for water cells to disappear when
-                                       the precipitation rate is 0% and the cell is 
-                                       isolated.
           humidity_lakes:              Part of lakes contribution for humidity
                                        (between 0 and 1).
           a_humidity:                  Amplitude of the normal distribution used to 
@@ -202,12 +201,14 @@ class ConfigClimate(object):
                                        lakes evolution (between 0 and 1).
         """
         self.threshold_dryness = threshold_dryness
-        self.evaporation = evaporation
         self.humidity_lakes = humidity_lakes
         self.a_humidity = a_humidity
         self.sigma_humidity = sigma_humidity
         self.threshold_wetness = threshold_wetness
         self.loop = loop
+        self.humidity_precipitations = humidity_precipitations
+        self.moore_amplitude = moore_amplitude
+        self.threshold_humidity = threshold_humidity
 
 class Simulator(object):
     """Environment simulator.
@@ -380,11 +381,13 @@ class Simulator(object):
                 sim_config.climate,
                 sim_config.config_climate.threshold_dryness,
                 sim_config.config_climate.threshold_wetness,
-                sim_config.config_climate.evaporation,
 		        sim_config.config_climate.humidity_lakes,
 		        sim_config.config_climate.a_humidity,
 		        sim_config.config_climate.sigma_humidity,
 		        sim_config.config_climate.loop,
+                sim_config.config_climate.humidity_precipitations,
+                sim_config.config_climate.moore_amplitude,
+                sim_config.config_climate.threshold_humidity,
                 self._step_callback,
             )
             if is_server:

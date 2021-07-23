@@ -470,20 +470,24 @@ inline bool write(const action_policy& type, Stream& out) {
 struct config_climate {
     float threshold_dryness;
     float threshold_wetness;
-    float evaporation;
 	float humidity_lakes;
 	float a_humidity;
 	float sigma_humidity;
 	float loop;
+    float humidity_precipitations;
+    float moore_amplitude;
+    float threshold_humidity;
 
     inline bool init_helper(const config_climate& src){
         threshold_dryness = src.threshold_dryness;
         threshold_wetness = src.threshold_wetness;
-        evaporation = src.evaporation;
         humidity_lakes = src.humidity_lakes;
         a_humidity = src.a_humidity;
         sigma_humidity = src.sigma_humidity;
         loop = src.loop;
+        humidity_precipitations = src.humidity_precipitations;
+        moore_amplitude = src.moore_amplitude;
+        threshold_humidity = src.threshold_humidity;
 
         return true;
     }
@@ -496,8 +500,6 @@ struct config_climate {
  *                                  no deletion)
  * \param   threshold_wetness     The threshold for creation of water cells (above,
  *                                  no creation)
- * \param   evaporation           The probability for water cells to disappear when 
- *                                  the precipitation rate is 0% and the cell is isolated.
  * \param   humidity_lakes        Lakes contribution for humidity
  * \param   a_humidity            Amplitude of the normal distribution used to
  *                                  compute humidity due to lakes.
@@ -505,25 +507,32 @@ struct config_climate {
  *                                  used to compute humidity due to lakes.
  * \param   loop                  Proportion of humidity taken into account for
  *                                  lakes evolution
+ * \param   humidity_precipitations         
+ * \param   moore_amplitude
+ * \param   threshold_humidity
  */
 template<typename T>
 inline bool init(
         config_climate config,
         float threshold_dryness,
         float threshold_wetness,
-        float evaporation,
         float humidity_lakes,
         float a_humidity,
         float sigma_humidity,
-        float loop)
+        float loop,
+        float humidity_precipitations,
+        float moore_amplitude,
+        float threshold_humidity)
 {
     config.threshold_dryness = threshold_dryness;
     config.threshold_wetness = threshold_wetness;
-    config.evaporation = evaporation;
     config.humidity_lakes = humidity_lakes;
     config.a_humidity = a_humidity;
     config.sigma_humidity = sigma_humidity;
     config.loop = loop;
+    config.humidity_precipitations = humidity_precipitations;
+    config.moore_amplitude = moore_amplitude;
+    config.threshold_humidity = threshold_humidity;
     
     return true;
 }
@@ -537,11 +546,13 @@ template<typename Stream>
 bool read(config_climate& config, Stream& in) {
     if (!read(config.threshold_dryness, in)
      || !read(config.threshold_wetness, in)
-     || !read(config.evaporation, in)
      || !read(config.humidity_lakes, in)
      || !read(config.a_humidity, in)
      || !read(config.sigma_humidity, in)
-     || !read(config.loop, in))
+     || !read(config.loop, in)
+     || !read(config.humidity_precipitations, in)
+     || !read(config.moore_amplitude, in)
+     || !read(config.threshold_humidity, in))
         return false;
     return true;
 }
@@ -553,11 +564,13 @@ template<typename Stream>
 bool write(const config_climate& config, Stream& out) {
     return write(config.threshold_dryness, out)
         && write(config.threshold_wetness, out)
-        && write(config.evaporation, out)
         && write(config.humidity_lakes, out)
         && write(config.a_humidity, out)
         && write(config.sigma_humidity, out)
-        && write(config.loop, out);
+        && write(config.loop, out)
+        && write(config.humidity_precipitations, out)
+        && write(config.moore_amplitude, out)
+        && write(config.threshold_humidity, out);
 }
 
 /**
@@ -1548,9 +1561,10 @@ public:
             config.item_types.data,
             (unsigned int) config.item_types.length, config.update_frequency, config.update_iterations,
             config.climate.threshold_dryness, config.climate.threshold_wetness, 
-		    config.climate.evaporation, config.climate.humidity_lakes, 
+		    config.climate.humidity_lakes, 
             config.climate.a_humidity, config.climate.sigma_humidity, 
-            config.climate.loop, seed),
+            config.climate.loop, config.climate.humidity_precipitations,
+            config.climate.moore_amplitude, config.climate.threshold_humidity, seed),
         agents(32), semaphores(8), id_counter(1), requested_moves(32, alloc_position_keys),
         acted_agent_count(0), active_agent_count(0), data(data), time(0)
     {
@@ -2367,7 +2381,7 @@ private:
         if (myFile) {
             myFile << "[" << nb_items[0];
             if (config.item_types.length > 1) {
-                for (int j = 0; j < config.item_types.length; j++) {
+                for (int j = 1; j < config.item_types.length; j++) {
                     myFile << ", " << nb_items[j] ;
                 }
             }
