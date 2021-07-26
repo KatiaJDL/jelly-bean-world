@@ -19,8 +19,6 @@
 
 #define _USE_MATH_DEFINES
 
-#define REGENERATION
-
 #include <iostream>
 #include <fstream>
 #include <ctime>
@@ -662,6 +660,7 @@ struct simulator_config {
         core::swap(first.humidity_precipitations, second.humidity_precipitations);
         core::swap(first.moore_amplitude, second.moore_amplitude);
         core::swap(first.threshold_humidity, second.threshold_humidity);
+        core::swap(first.is_climate, second.is_climate);
    }
 
     static inline void free(simulator_config& config) {
@@ -717,6 +716,7 @@ private:
         humidity_precipitations = src.humidity_precipitations;
         moore_amplitude = src.moore_amplitude;
         threshold_humidity = src.threshold_humidity;
+        is_climate = src.is_climate;
         return true;
     }
 
@@ -778,7 +778,8 @@ bool read(simulator_config& config, Stream& in) {
      || !read(config.loop, in)
      || !read(config.humidity_precipitations, in)
      || !read(config.moore_amplitude, in)
-     || !read(config.threshold_humidity, in))
+     || !read(config.threshold_humidity, in)
+     || !read(config.is_climate, in))
         return false;
 
     config.item_types.data = (item_properties*) malloc(max((size_t) 1, sizeof(item_properties) * config.item_types.length));
@@ -841,7 +842,8 @@ bool write(const simulator_config& config, Stream& out) {
         && write(config.loop, out)
         && write(config.humidity_precipitations, out)
         && write(config.moore_amplitude, out)
-        && write(config.threshold_humidity, out);
+        && write(config.threshold_humidity, out)
+        && write(config.is_climate, out);
 }
 
 /**
@@ -1620,7 +1622,7 @@ public:
             (unsigned int) config.item_types.length, config.update_frequency, config.update_iterations,
             config.threshold_dryness, config.threshold_wetness, config.humidity_lakes, 
             config.a_humidity, config.sigma_humidity, config.loop, config.humidity_precipitations,
-            config.moore_amplitude, config.threshold_humidity, seed),
+            config.moore_amplitude, config.threshold_humidity, config.is_climate, seed),
         agents(32), semaphores(8), id_counter(1), requested_moves(32, alloc_position_keys),
         acted_agent_count(0), active_agent_count(0), data(data), time(0)
     {
@@ -2387,14 +2389,12 @@ private:
         }
 #endif
 
-#if defined(REGENERATION)
         if (config.update_frequency != 0 && time%config.update_frequency==0) {
             
             log();
 
             world.update_patches(time);
         }  
-#endif
 
         /* compute new scent and vision for each agent */
         update_agent_scent_and_vision();
@@ -2416,7 +2416,7 @@ private:
     /* Print and save log files for the number of items */
     inline void log() {
         std::vector<int> nb_items(config.item_types.length);
-        for (int j =0; j < config.item_types.length; j++) {
+        for (size_t j =0; j < config.item_types.length; j++) {
             nb_items[j] = 0;
         }
         
@@ -2427,7 +2427,7 @@ private:
                 patch_type& p = row.values[(long int) j.position];
                 
                 for (size_t k = 0; k < p.items.length; k++) {
-                    for (int j =0; j < config.item_types.length; j++) {
+                    for (size_t j =0; j < config.item_types.length; j++) {
                         if (p.items[k].item_type==j) nb_items[j] ++;
                     }
                 }
@@ -2437,7 +2437,7 @@ private:
         if (myFile) {
             myFile << "[" << nb_items[0];
             if (config.item_types.length > 1) {
-                for (int j = 1; j < config.item_types.length; j++) {
+                for (size_t j = 1; j < config.item_types.length; j++) {
                     myFile << ", " << nb_items[j] ;
                 }
             }
@@ -2552,7 +2552,7 @@ status init(simulator<SimulatorData>& sim,
             (unsigned int) sim.config.item_types.length, sim.config.update_frequency, sim.config.update_iterations, 
             sim.config.threshold_dryness, sim.config.threshold_wetness, sim.config.humidity_lakes, 
 		    sim.config.a_humidity, sim.config.sigma_humidity, sim.config.loop, sim.config.humidity_precipitations, 
-            sim.config.moore_amplitude, sim.config.threshold_humidity, seed)) {
+            sim.config.moore_amplitude, sim.config.threshold_humidity, sim.config.is_climate, seed)) {
         free(sim.config); free(sim.data);
         free(sim.agents); free(sim.semaphores);
         free(sim.requested_moves); free(sim.scent_model);
@@ -2648,7 +2648,7 @@ bool read(simulator<SimulatorData>& sim, Stream& in, const SimulatorData& data)
     if (!read(sim.world, in, sim.config.item_types.data, (unsigned int) sim.config.item_types.length, sim.config.update_frequency, sim.config.update_iterations, 
             sim.config.threshold_dryness, sim.config.threshold_wetness, sim.config.humidity_lakes, 
 		    sim.config.a_humidity, sim.config.sigma_humidity, sim.config.loop, sim.config.humidity_precipitations, 
-            sim.config.moore_amplitude, sim.config.threshold_humidity, sim.agents)) {
+            sim.config.moore_amplitude, sim.config.threshold_humidity, sim.config.is_climate, sim.agents)) {
         for (auto entry : sim.agents) {
             free(*entry.value); free(entry.value);
         }

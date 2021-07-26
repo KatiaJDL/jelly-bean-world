@@ -159,18 +159,22 @@ class SimulatorConfig(object):
         self.deleted_item_lifetime = deleted_item_lifetime
         self.agent_field_of_view = agent_field_of_view
         self.seed = seed
-        
-        self.update_frequency = update_frequency
-        if update_iterations is not None:
-            self.update_iterations = update_iterations
-        else :
-            self.update_iterations = mcmc_num_iter//10
 
         self.climate = climate
         if config_climate is not None:
             self.config_climate = config_climate
         else:
             self.config_climate= ConfigClimate()
+
+        if climate:
+            self.update_frequency = update_frequency
+        else:
+            self.update_frequency = 0
+        
+        if update_iterations is not None:
+                self.update_iterations = update_iterations
+        else :
+            self.update_iterations = mcmc_num_iter//10
 
 class ConfigClimate(object):
     "Represent a configuration for a variable environment and climate dynamics"
@@ -184,7 +188,7 @@ class ConfigClimate(object):
 		loop = 0.46,
         humidity_precipitations = 0,
         moore_amplitude = -3.5,
-        threshold_humidity = 100
+        threshold_humidity = 150
     ):
         """Creates a new configuration for an environment with climate dynamics.
 
