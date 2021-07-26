@@ -18,6 +18,7 @@
 #define JBW_GIBBS_FIELD_H_
 
 #include <stdio.h>
+#include <iostream>
 
 #include <core/random.h>
 #include <math/log.h>
@@ -65,6 +66,8 @@ struct gibbs_field_cache
 	unsigned int update_frequency;
 	unsigned int update_iterations;
 
+	unsigned int lakes_type;
+
 	bool is_climate;
 
 #if SAMPLING_METHOD == GIBBS_SAMPLING
@@ -78,11 +81,12 @@ struct gibbs_field_cache
 
 	gibbs_field_cache(const ItemType* item_types, unsigned int item_type_count, 
 					unsigned int n, unsigned int update_frequency, 
-					unsigned int update_iterations, float threshold_dryness, 
+					unsigned int update_iterations, unsigned int lakes_type, float threshold_dryness, 
 					float threshold_wetness, float humidity_lakes, float a_humidity, 
 					float sigma_humidity, float loop, bool is_climate) :
 		two_n(2*n), four_n(4*n), item_types(item_types), item_type_count(item_type_count), 
-		update_frequency(update_frequency), update_iterations(update_iterations), threshold_dryness(threshold_dryness), 
+		update_frequency(update_frequency), update_iterations(update_iterations), 
+		lakes_type(lakes_type), threshold_dryness(threshold_dryness), 
 		threshold_wetness(threshold_wetness), humidity_lakes(humidity_lakes),
 		a_humidity(a_humidity),sigma_humidity(sigma_humidity), loop(loop), 
 		humidity_precipitations(humidity_precipitations), moore_amplitude(moore_amplitude), 
@@ -251,16 +255,16 @@ private:
 
 	template<typename A>
 	friend bool init(gibbs_field_cache<A>&, const A*, unsigned int, unsigned int, unsigned int,
-		unsigned int, float, float, float, float, float, float, float, float, float, bool);
+		unsigned int, unsigned int, float, float, float, float, float, float, float, float, float, bool);
 };
 
 template<typename ItemType>
 bool init(gibbs_field_cache<ItemType>& cache,
 		const ItemType* item_types, unsigned int item_type_count, unsigned int n, 
-		unsigned int update_frequency, unsigned int update_iterations, float threshold_dryness, 
-		float threshold_wetness, float humidity_lakes, float a_humidity, float sigma_humidity,
-		float loop, float humidity_precipitations, float moore_amplitude, float threshold_humidity,
-		bool is_climate)
+		unsigned int update_frequency, unsigned int update_iterations, unsigned int lakes_type, 
+		float threshold_dryness, float threshold_wetness, float humidity_lakes, float a_humidity, 
+		float sigma_humidity, float loop, float humidity_precipitations, float moore_amplitude, 
+		float threshold_humidity, bool is_climate)
 {
 	cache.two_n = 2*n;
 	cache.four_n = 4*n;
@@ -268,6 +272,7 @@ bool init(gibbs_field_cache<ItemType>& cache,
 	cache.item_type_count = item_type_count;
 	cache.update_frequency = update_frequency;
 	cache.update_iterations = update_iterations;
+	cache.lakes_type = lakes_type;
 	cache.threshold_dryness=threshold_dryness;
     cache.threshold_wetness=threshold_wetness;
 	cache.humidity_lakes=humidity_lakes;
@@ -380,6 +385,7 @@ public:
 				unsigned int item_type;
 				if (current_time==0) {
 					item_type = rng() % cache.item_type_count;
+					// cache.item_types[item_type].name
 				}
 				else if (cache.varying_item_type_count > 0) {
 					if (cache.is_climate) {
@@ -387,7 +393,7 @@ public:
 						if (choice < cache.varying_item_type_count) {
 							item_type = cache.varying_item_types[choice];
 						}
-						else item_type = 2;
+						else item_type = cache.lakes_type;
 					} else {
 						unsigned int choice = rng() % cache.varying_item_type_count;
 						item_type = cache.varying_item_types[choice];					
@@ -433,11 +439,11 @@ public:
 								log_acceptance_probability += cache.interaction(new_position, items[m].location, item_type, items[m].item_type);
 								log_acceptance_probability += cache.interaction(items[m].location, new_position, items[m].item_type, item_type);
 							}
-							else if (cache.is_climate && item_type==items[m].item_type && item_type !=2){
+							else if (cache.is_climate && item_type==items[m].item_type && item_type !=cache.lakes_type){
 								float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
 								if (moore_proba > 0) moore++;							
 							}
-							else if (cache.is_climate && item_type==items[m].item_type && item_type ==2){
+							else if (cache.is_climate && item_type==items[m].item_type && item_type ==cache.lakes_type){
 								float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
 								if (moore_proba > 0) moore++;		
 							}
@@ -445,7 +451,7 @@ public:
 								float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
 								if (moore_proba > 0) moore++;							
 							}
-							if (cache.is_climate && current_time >0 && items[m].item_type == 2) {
+							if (cache.is_climate && current_time >0 && items[m].item_type == cache.lakes_type) {
 								float* gaussian_args = new float[2];
 								gaussian_args[0] = cache.sigma_humidity; gaussian_args[1] = cache.a_humidity;
 								log_humidity +=gaussian_interaction_fn(new_position, items[m].location, gaussian_args);
@@ -468,7 +474,7 @@ public:
 
 							if (cache.is_climate) {
 								log_humidity = cache.humidity_lakes* log_humidity + cache.humidity_precipitations* precipitations(new_position, current_time);
-								if (item_type==2) {
+								if (item_type==cache.lakes_type) {
 									r = precipitations(new_position, current_time);
 									if (r>cache.threshold_wetness && log_humidity < cache.threshold_humidity) {
 										r -= cache.loop*log_humidity;
@@ -508,7 +514,7 @@ public:
 				const position old_position = current.items[item_index].location;
 
 				if (current_time !=0) {
-					if (old_item_type!=2 || !cache.is_climate) old_item_type = UINT_MAX;
+					if (old_item_type!=cache.lakes_type || !cache.is_climate) old_item_type = UINT_MAX;
 				}
 				int moore = 0;
 				float log_humidity = 0.0f;
@@ -542,11 +548,11 @@ public:
 								log_acceptance_probability -= cache.interaction(old_position, items[m].location, old_item_type, items[m].item_type);
 								log_acceptance_probability -= cache.interaction(items[m].location, old_position, items[m].item_type, old_item_type);
 							}
-							else if (cache.is_climate && old_item_type==items[m].item_type && old_item_type ==2){
+							else if (cache.is_climate && old_item_type==items[m].item_type && old_item_type ==cache.lakes_type){
 								float moore_proba = moore_interaction_fn(old_position, items[m].location, args);
 								if (moore_proba > 0) moore++;		
 							}
-							if (cache.is_climate && current_time >0 && items[m].item_type == 2) {
+							if (cache.is_climate && current_time >0 && items[m].item_type == cache.lakes_type) {
 								float* gaussian_args = new float[2];
 								gaussian_args[0] = cache.sigma_humidity; gaussian_args[1] = cache.a_humidity;
 								log_humidity +=gaussian_interaction_fn(old_position, items[m].location, gaussian_args);

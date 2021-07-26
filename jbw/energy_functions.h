@@ -457,11 +457,8 @@ float precipitations(const position pos, const uint64_t time) {
 	// float period = 600;
 	// return 50 + 45*sin(2*3.14*time/period);
 	// return 20;
-	if (time < 2000) return 5;
-	else {
-		if (time < 5000) return 80;
-		else return 5;
-	}
+	if (time % 8000 < 4000) return 5;
+	else return 80;
 	// return 80;
 }
 

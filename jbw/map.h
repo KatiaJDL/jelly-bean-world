@@ -244,23 +244,23 @@ struct map
 
 public:
 	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count, 
-		unsigned int update_frequency, unsigned int update_iterations, float threshold_dryness, float threshold_wetness, 
-		float humidity_lakes, float a_humidity, float sigma_humidity, float loop, 
-		float humidity_precipitations, float moore_amplitude, float threshold_humidity, 
-		bool is_climate, uint_fast32_t seed) :
+		unsigned int update_frequency, unsigned int update_iterations, unsigned int lakes_type,
+		float threshold_dryness, float threshold_wetness, float humidity_lakes, float a_humidity, 
+		float sigma_humidity, float loop, float humidity_precipitations, float moore_amplitude, 
+		float threshold_humidity, bool is_climate, uint_fast32_t seed) :
 		patches(32), n(n), mcmc_iterations(mcmc_iterations), rng(seed), initial_seed(seed), 
-		cache(item_types, item_type_count, n, update_frequency, update_iterations, threshold_dryness, threshold_wetness, 
-		humidity_lakes, a_humidity, sigma_humidity, loop, humidity_precipitations, moore_amplitude, threshold_humidity,
-		is_climate), nb_patches(0)
+		cache(item_types, item_type_count, n, update_frequency, update_iterations, lakes_type, threshold_dryness, 
+		threshold_wetness, humidity_lakes, a_humidity, sigma_humidity, loop, humidity_precipitations, moore_amplitude, 
+		threshold_humidity, is_climate), nb_patches(0)
 	{ }
 
 	map(unsigned int n, unsigned int mcmc_iterations, const ItemType* item_types, unsigned int item_type_count, 
-		unsigned int update_frequency, unsigned int update_iterations, float threshold_dryness, 
+		unsigned int update_frequency, unsigned int update_iterations, unsigned int lakes_type, float threshold_dryness, 
 		float threshold_wetness, float humidity_lakes, float a_humidity, float sigma_humidity,
 		float loop, float humidity_precipitations, float moore_amplitude, float threshold_humidity,
 		bool is_climate) :
-		map(n, mcmc_iterations, item_types, item_type_count, update_frequency, update_iterations, threshold_dryness, 
-		threshold_wetness, humidity_lakes, a_humidity, sigma_humidity,
+		map(n, mcmc_iterations, item_types, item_type_count, update_frequency, update_iterations, 
+		lakes_type, threshold_dryness, threshold_wetness, humidity_lakes, a_humidity, sigma_humidity,
 		loop, humidity_precipitations, moore_amplitude, threshold_humidity, is_climate,
 #if !defined(NDEBUG)
 			0) { }
@@ -903,7 +903,7 @@ template<typename PerPatchData, typename ItemType>
 inline bool init(map<PerPatchData, ItemType>& world, unsigned int n,
 		unsigned int mcmc_iterations, const ItemType* item_types,
 		unsigned int item_type_count, unsigned int update_frequency,
-		unsigned int update_iterations, float threshold_dryness, 
+		unsigned int update_iterations, unsigned int lakes_type, float threshold_dryness, 
 		float threshold_wetness, float humidity_lakes, float a_humidity, 
 		float sigma_humidity, float loop, float humidity_precipitations, 
 		float moore_amplitude, float threshold_humidity, 
@@ -916,9 +916,9 @@ inline bool init(map<PerPatchData, ItemType>& world, unsigned int n,
 	world.initial_seed = seed;
 	world.nb_patches = 0;
 	if (!init(world.cache, item_types, item_type_count, n, update_frequency,
-		update_iterations, threshold_dryness, threshold_wetness, humidity_lakes, 
-		a_humidity, sigma_humidity, loop, humidity_precipitations, moore_amplitude, 
-		threshold_humidity, is_climate)) {
+		update_iterations, lakes_type, threshold_dryness, threshold_wetness, 
+		humidity_lakes, a_humidity, sigma_humidity, loop, humidity_precipitations, 
+		moore_amplitude, threshold_humidity, is_climate)) {
 		free(world.patches);
 		return false;
 	}
@@ -931,7 +931,7 @@ template<typename PerPatchData, typename ItemType>
 inline bool init(map<PerPatchData, ItemType>& world, unsigned int n,
 		unsigned int mcmc_iterations, const ItemType* item_types,
 		unsigned int item_type_count, unsigned int update_frequency, 
-		unsigned int update_iterations, float threshold_dryness, 
+		unsigned int update_iterations, const char*lakes_type, float threshold_dryness, 
 		float threshold_wetness, float humidity_lakes, float a_humidity, 
 		float sigma_humidity, float loop, float humidity_precipitations, 
 		float moore_amplitude, float threshold_humidity, bool is_climate)
@@ -942,7 +942,7 @@ inline bool init(map<PerPatchData, ItemType>& world, unsigned int n,
 	uint_fast32_t seed = (uint_fast32_t) milliseconds();
 #endif
 	return init(world, n, mcmc_iterations, item_types, item_type_count, 
-		update_frequency, update_iterations, threshold_dryness, 
+		update_frequency, update_iterations, lakes_type, threshold_dryness, 
 		threshold_wetness, humidity_lakes, a_humidity, sigma_humidity,
 		loop, humidity_precipitations, moore_amplitude, threshold_humidity, 
 		is_climate, seed);
@@ -951,7 +951,8 @@ inline bool init(map<PerPatchData, ItemType>& world, unsigned int n,
 template<typename PerPatchData, typename ItemType, typename Stream, typename PatchReader>
 bool read(map<PerPatchData, ItemType>& world, Stream& in,
 		const ItemType* item_types, unsigned int item_type_count,
-		unsigned int update_frequency, unsigned int update_iterations, float threshold_dryness, 
+		unsigned int update_frequency, unsigned int update_iterations, 
+		unsigned int lakes_type, float threshold_dryness, 
 		float threshold_wetness, float humidity_lakes, float a_humidity, 
 		float sigma_humidity, float loop, float humidity_precipitations, 
 		float moore_amplitude, float threshold_humidity, bool is_climate,
@@ -1019,9 +1020,9 @@ bool read(map<PerPatchData, ItemType>& world, Stream& in,
 	}
 
 	if (!init(world.cache, item_types, item_type_count, world.n, update_frequency,
-		update_iterations, threshold_dryness, threshold_wetness, humidity_lakes, 
-		a_humidity, sigma_humidity, loop, humidity_precipitations, moore_amplitude, 
-		threshold_humidity, is_climate)) {
+		update_iterations, lakes_type, threshold_dryness, threshold_wetness,
+		humidity_lakes, a_humidity, sigma_humidity, loop, humidity_precipitations, 
+		moore_amplitude, threshold_humidity, is_climate)) {
 		for (auto row : world.patches) {
 			for (auto entry : row.value)
 				free(entry.value);

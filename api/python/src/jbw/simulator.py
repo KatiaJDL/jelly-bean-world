@@ -77,7 +77,16 @@ class SimulatorConfig(object):
         update_frequency=5,
         update_iterations=None,
         climate = False,
-        config_climate = None
+        lakes_name = "lake",
+        threshold_dryness = 70,
+        threshold_wetness = 30,
+		humidity_lakes = 1.5,
+		a_humidity = 2,
+		sigma_humidity = 10,
+		loop = 0.46,
+        humidity_precipitations = 0,
+        moore_amplitude = -3.5,
+        threshold_humidity = 150
     ):
         """Creates a new simulator configuration.
 
@@ -121,7 +130,19 @@ class SimulatorConfig(object):
           seed:                        The initial seed for the pseudorandom number
                                        generator.
           climate:                     Whether this environment designed for climate 
-                                       dynamics                 
+                                       dynamics
+          lakes_name                   Name of the item types that represent water 
+                                       cells.
+          threshold_dryness:           Above, no deletion of water cells.
+          threshold_wetness:           Under it, no creation of water cells.
+          humidity_lakes:              Part of lakes contribution for humidity
+                                       (between 0 and 1).
+          a_humidity:                  Amplitude of the normal distribution used to 
+                                       compute humidity due to lakes.
+          sigma_humidity:              Standard deviation of the normal distribution 
+                                       used to compute humidity due to lakes.
+          loop:                        Proportion of humidity taken into account for
+                                       lakes evolution (between 0 and 1).                 
         """
         assert len(items) > 0, "A non-empty list of items must be provided."
         self.max_steps_per_movement = max_steps_per_movement
@@ -161,13 +182,15 @@ class SimulatorConfig(object):
         self.seed = seed
 
         self.climate = climate
-        if config_climate is not None:
-            self.config_climate = config_climate
-        else:
-            self.config_climate= ConfigClimate()
 
         if climate:
             self.update_frequency = update_frequency
+            # Retrieve lakes type in the items
+            for index, i in enumerate(items):
+                if i.name == lakes_name:
+                    self.lakes_type = index
+                    break
+            assert (self.lakes_type is not None), "Lakes name must correspond to a item if climate dynamics are activated"
         else:
             self.update_frequency = 0
         
@@ -176,34 +199,6 @@ class SimulatorConfig(object):
         else :
             self.update_iterations = mcmc_num_iter//10
 
-class ConfigClimate(object):
-    "Represent a configuration for a variable environment and climate dynamics"
-    def __init__(
-        self,
-        threshold_dryness = 70,
-        threshold_wetness = 30,
-		humidity_lakes = 1.5,
-		a_humidity = 2,
-		sigma_humidity = 10,
-		loop = 0.46,
-        humidity_precipitations = 0,
-        moore_amplitude = -3.5,
-        threshold_humidity = 150
-    ):
-        """Creates a new configuration for an environment with climate dynamics.
-
-        Arguments:
-          threshold_dryness:           Above, no deletion of water cells.
-          threshold_wetness:           Under it, no creation of water cells.
-          humidity_lakes:              Part of lakes contribution for humidity
-                                       (between 0 and 1).
-          a_humidity:                  Amplitude of the normal distribution used to 
-                                       compute humidity due to lakes.
-          sigma_humidity:              Standard deviation of the normal distribution 
-                                       used to compute humidity due to lakes.
-          loop:                        Proportion of humidity taken into account for
-                                       lakes evolution (between 0 and 1).
-        """
         self.threshold_dryness = threshold_dryness
         self.humidity_lakes = humidity_lakes
         self.a_humidity = a_humidity
@@ -383,15 +378,16 @@ class Simulator(object):
                 sim_config.update_frequency,
                 sim_config.update_iterations,
                 sim_config.climate,
-                sim_config.config_climate.threshold_dryness,
-                sim_config.config_climate.threshold_wetness,
-		        sim_config.config_climate.humidity_lakes,
-		        sim_config.config_climate.a_humidity,
-		        sim_config.config_climate.sigma_humidity,
-		        sim_config.config_climate.loop,
-                sim_config.config_climate.humidity_precipitations,
-                sim_config.config_climate.moore_amplitude,
-                sim_config.config_climate.threshold_humidity,
+                sim_config.lakes_type,
+                sim_config.threshold_dryness,
+                sim_config.threshold_wetness,
+		        sim_config.humidity_lakes,
+		        sim_config.a_humidity,
+		        sim_config.sigma_humidity,
+		        sim_config.loop,
+                sim_config.humidity_precipitations,
+                sim_config.moore_amplitude,
+                sim_config.threshold_humidity,
                 self._step_callback,
             )
             if is_server:

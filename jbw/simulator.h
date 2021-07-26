@@ -604,6 +604,8 @@ struct simulator_config {
     unsigned int update_frequency;
     unsigned int update_iterations;
 
+    unsigned int lakes_type;
+
     /* parameters for climate dynamics */
     bool is_climate;
 
@@ -651,6 +653,7 @@ struct simulator_config {
         core::swap(first.deleted_item_lifetime, second.deleted_item_lifetime);
         core::swap(first.update_frequency, second.update_frequency);
         core::swap(first.update_iterations, second.update_iterations);
+        core::swap(first.lakes_type, second.lakes_type);
         core::swap(first.threshold_dryness, second.threshold_dryness);
         core::swap(first.threshold_wetness, second.threshold_wetness);
         core::swap(first.humidity_lakes, second.humidity_lakes);
@@ -707,6 +710,7 @@ private:
         deleted_item_lifetime = src.deleted_item_lifetime;
         update_frequency = src.update_frequency;
         update_iterations = src.update_iterations;
+        lakes_type = src.lakes_type;
         threshold_dryness = src.threshold_dryness;
         threshold_wetness = src.threshold_wetness;
         humidity_lakes = src.humidity_lakes;
@@ -770,6 +774,7 @@ bool read(simulator_config& config, Stream& in) {
      || !read(config.item_types.length, in)
      || !read(config.update_frequency, in)
      || !read(config.update_iterations, in)
+     || !read(config.lakes_type, in)
      || !read(config.threshold_dryness, in)
      || !read(config.threshold_wetness, in)
      || !read(config.humidity_lakes, in)
@@ -834,6 +839,7 @@ bool write(const simulator_config& config, Stream& out) {
         && write(config.deleted_item_lifetime, out)
         && write(config.update_frequency, out)
         && write(config.update_iterations, out)
+        && write(config.lakes_type, out)
         && write(config.threshold_dryness, out)
         && write(config.threshold_wetness, out)
         && write(config.humidity_lakes, out)
@@ -1620,7 +1626,7 @@ public:
             config.mcmc_iterations,
             config.item_types.data,
             (unsigned int) config.item_types.length, config.update_frequency, config.update_iterations,
-            config.threshold_dryness, config.threshold_wetness, config.humidity_lakes, 
+            config.lakes_type, config.threshold_dryness, config.threshold_wetness, config.humidity_lakes, 
             config.a_humidity, config.sigma_humidity, config.loop, config.humidity_precipitations,
             config.moore_amplitude, config.threshold_humidity, config.is_climate, seed),
         agents(32), semaphores(8), id_counter(1), requested_moves(32, alloc_position_keys),
@@ -2446,6 +2452,7 @@ private:
         else {
             std::cout << "ERROR: Impossible to open the log file." << std::endl;
         }
+        myFile.close();
     }
 
     /* Precondition: This thread has all agent locks, which it will release. */
@@ -2550,7 +2557,7 @@ status init(simulator<SimulatorData>& sim,
             sim.config.mcmc_iterations,
             sim.config.item_types.data,
             (unsigned int) sim.config.item_types.length, sim.config.update_frequency, sim.config.update_iterations, 
-            sim.config.threshold_dryness, sim.config.threshold_wetness, sim.config.humidity_lakes, 
+            sim.config.lakes_type, sim.config.threshold_dryness, sim.config.threshold_wetness, sim.config.humidity_lakes, 
 		    sim.config.a_humidity, sim.config.sigma_humidity, sim.config.loop, sim.config.humidity_precipitations, 
             sim.config.moore_amplitude, sim.config.threshold_humidity, sim.config.is_climate, seed)) {
         free(sim.config); free(sim.data);
@@ -2646,7 +2653,7 @@ bool read(simulator<SimulatorData>& sim, Stream& in, const SimulatorData& data)
     }
 
     if (!read(sim.world, in, sim.config.item_types.data, (unsigned int) sim.config.item_types.length, sim.config.update_frequency, sim.config.update_iterations, 
-            sim.config.threshold_dryness, sim.config.threshold_wetness, sim.config.humidity_lakes, 
+            sim.config.lakes_type, sim.config.threshold_dryness, sim.config.threshold_wetness, sim.config.humidity_lakes, 
 		    sim.config.a_humidity, sim.config.sigma_humidity, sim.config.loop, sim.config.humidity_precipitations, 
             sim.config.moore_amplitude, sim.config.threshold_humidity, sim.config.is_climate, sim.agents)) {
         for (auto entry : sim.agents) {

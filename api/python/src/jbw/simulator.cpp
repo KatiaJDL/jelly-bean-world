@@ -898,13 +898,13 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
     PyObject* py_climate;
     PyObject* py_callback;
     if (!PyArg_ParseTuple(
-      args, "IIOOOIIIIIOOIfffIIIOfffffffffO", &seed, &config.max_steps_per_movement,
+      args, "IIOOOIIIIIOOIfffIIIOIfffffffffO", &seed, &config.max_steps_per_movement,
       &py_allowed_movement_directions, &py_allowed_turn_directions, &py_no_op_allowed,
       &config.scent_dimension, &config.color_dimension, &config.vision_range,
       &config.patch_size, &config.mcmc_iterations, &py_items, &py_agent_color,
       &collision_policy, &config.agent_field_of_view, &config.decay_param,
       &config.diffusion_param, &config.deleted_item_lifetime, 
-      &config.update_frequency, &config.update_iterations, &py_climate, 
+      &config.update_frequency, &config.update_iterations, &py_climate, &config.lakes_type,
       &config.threshold_dryness, &config.threshold_wetness, &config.humidity_lakes, 
       &config.a_humidity, &config.sigma_humidity, &config.loop, 
       &config.humidity_precipitations, &config.moore_amplitude, &config.threshold_humidity, 
