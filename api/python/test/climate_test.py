@@ -4,8 +4,7 @@ from math import pi
 from random import randint
 
 from jbw.item import RegenerationFunction
-
-
+from jbw.precipitations import PrecipitationsFunction
 
 class SimpleAgent(jbw.Agent):
 	def __init__(self, simulator, load_filepath=None):
@@ -57,7 +56,7 @@ def make_config():
 							[jbw.InteractionFunction.ZERO],
 							[jbw.InteractionFunction.CROSS,10.0,15.0,20.0,-200.0,-20.0,10.0,],  # parameters for interaction between item 3 and item 3
                 		], regeneration_fn=RegenerationFunction.CONSTANT, regeneration_fn_args=[5.0]
-				))
+						))
 
 	# construct the simulator configuration
 	return jbw.SimulatorConfig(max_steps_per_movement=1, vision_range=5,
@@ -65,7 +64,8 @@ def make_config():
 		allowed_turn_directions=[jbw.ActionPolicy.DISALLOWED, jbw.ActionPolicy.DISALLOWED, jbw.ActionPolicy.ALLOWED, jbw.ActionPolicy.ALLOWED],
 		no_op_allowed=False, patch_size=32, mcmc_num_iter=4000, items=items, agent_color=[0.0, 0.0, 1.0],
 		collision_policy=jbw.MovementConflictPolicy.FIRST_COME_FIRST_SERVED, agent_field_of_view=2*pi,
-		decay_param=0.4, diffusion_param=0.14, deleted_item_lifetime=2000, seed=1234567890)
+		decay_param=0.4, diffusion_param=0.14, deleted_item_lifetime=2000, seed=1234567890, climate = True,
+		precipitations_fn = 1, precipitations_fn_args = [80])
 
 if __name__ == "__main__":
 	# create a local simulator

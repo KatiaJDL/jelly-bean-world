@@ -166,3 +166,9 @@ class InteractionFunction(Enum):
   arguments for this function should be [s, c, k, \delta, a_1, a_2, b_1, b_2]. """
 
   GAUSSIAN = 5
+  """A function that produces a gaussian distribution. f_ij(x,y) is computed:
+
+    diff = x - y
+    return A * exp(- diff[0]*diff[0]/(2*s*s) - diff[1]*diff[1]/(2*s*s))
+  
+  where s, A are constants. The arguments for this function should be [s, A]."""

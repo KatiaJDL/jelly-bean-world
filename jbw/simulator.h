@@ -185,6 +185,7 @@ struct item_properties {
 
     bool blocks_movement;
     float visual_occlusion;
+    /* Mean time between creation and deletion, 0 means no deletion*/
     unsigned int lifetime;
 
     energy_function<intensity_function> intensity_fn;
@@ -206,22 +207,6 @@ struct item_properties {
         core::free(properties.precipitations_fn);
     }
 };
-
-// inline bool init_precipitations_fn(
-//         energy_function<precipitations_function> function) 
-// {
-//     if (function.args == NULL) {
-//         function.fn = zero_precipitations_fn;
-//         function.args = (float*) malloc(1);
-//         if (function.args == NULL) {
-//             fprintf(stderr, "init_interaction_fns ERROR: Out of memory.\n");
-//             if (function.args != NULL) free(function);
-//             return false;
-//         }
-//         function.arg_count = 0;
-//     }
-//     return true;
-// }
 
 inline bool init_interaction_fns(
         energy_function<interaction_function>* fns,
@@ -582,7 +567,6 @@ struct simulator_config {
     static inline void free(simulator_config& config) {
         config.free_helper();
         core::free(config.item_types);
-        // core::free(config.precipitations_fn);
     }
 
 private:
@@ -602,16 +586,11 @@ private:
             agent_color[i] = src.agent_color[i];
         no_op_allowed = src.no_op_allowed;
 
-        // if (!init_precipitations_fn(precipitations_fn)) {
-        //     core::free(agent_color); return false;
-        // }
-
         for (unsigned int i = 0; i < src.item_types.length; i++) {
             if (!init(item_types[i], src.item_types[i], src.scent_dimension, src.color_dimension, (unsigned int) src.item_types.length)) {
                 for (unsigned int j = 0; j < i; j++)
                     core::free(item_types[i], (unsigned int) src.item_types.length);
                 core::free(agent_color); return false;
-                // core::free(precipitations_fn); return false;
             }
         }
         item_types.length = src.item_types.length;
@@ -640,9 +619,6 @@ private:
         moore_amplitude = src.moore_amplitude;
         threshold_humidity = src.threshold_humidity;
         is_climate = src.is_climate;
-        // precipitations_fn = src.precipitations_fn;
-        // if (src.item_types.length > 0) 
-        //     item_types[0].precipitations_fn = precipitations_fn;
         return true;
     }
 
@@ -707,7 +683,6 @@ bool read(simulator_config& config, Stream& in) {
      || !read(config.moore_amplitude, in)
      || !read(config.threshold_humidity, in)
      || !read(config.is_climate, in))
-    //  || !read(config.precipitations_fn, in))
         return false;
 
     config.item_types.data = (item_properties*) malloc(max((size_t) 1, sizeof(item_properties) * config.item_types.length));
@@ -773,7 +748,6 @@ bool write(const simulator_config& config, Stream& out) {
         && write(config.moore_amplitude, out)
         && write(config.threshold_humidity, out)
         && write(config.is_climate, out);
-        // && write(config.precipitations_fn, out);
 }
 
 /**
@@ -1586,7 +1560,6 @@ public:
      * to its state.
      */
     inline status add_agent(uint64_t& new_agent_id, agent_state*& new_agent) {
-        
         simulator_lock.lock();
         if (!agents.check_size()) {
             simulator_lock.unlock();
@@ -2318,11 +2291,9 @@ private:
             }
         }
 #endif
-
+        /* update the configuration if climate dynamics are activated */
         if (config.update_frequency != 0 && time%config.update_frequency==0) {
-            
-            log();
-
+            save_log();
             world.update_patches(time);
         }  
 
@@ -2344,7 +2315,7 @@ private:
     }
 
     /* Print and save log files for the number of items */
-    inline void log() {
+    inline void save_log() {
         std::vector<int> nb_items(config.item_types.length);
         for (size_t j =0; j < config.item_types.length; j++) {
             nb_items[j] = 0;

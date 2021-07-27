@@ -17,8 +17,6 @@
 #ifndef JBW_MAP_H_
 #define JBW_MAP_H_
 
-#define CLIMATE
-
 #include <core/map.h>
 #include "gibbs_field.h"
 #include "energy_functions.h"
@@ -233,6 +231,7 @@ struct map
 	unsigned int n;
 	unsigned int mcmc_iterations;
 
+	/* for iteration over the patches */
 	size_t nb_patches;
 
 	std::minstd_rand rng;
@@ -610,9 +609,8 @@ public:
 		/* construct the Gibbs field and sample the patches at positions_to_sample */
 		gibbs_field<map<PerPatchData, ItemType>> field(
 				cache, patch_positions, neighborhoods, num_patches_to_sample, n);
-		for (unsigned int i = 0; i < mcmc_iterations; i++) {
+		for (unsigned int i = 0; i < mcmc_iterations; i++)
 			field.sample(rng); 
-		}
 
 		/* set the core four patches to fixed */
 		i = row_index;
@@ -626,11 +624,12 @@ public:
 		neighborhood[2] = &patches.values[i].values[j0];
 		neighborhood[3] = &patches.values[i].values[j0 + 1];
 		for (unsigned int k = 0; k < 4; k++)
-		  	neighborhood[k]->fixed = true;
+			neighborhood[k]->fixed = true;
 
 		return index;
 	}
 
+	/* update all the patches during the simulation if climate dynamics are activated*/
 	inline void update_patches(uint64_t current_time) {
 
         /* Iterate over patches */
@@ -639,18 +638,11 @@ public:
 			patch_neighborhood<patch_type>* neighborhoods = new patch_neighborhood<patch_type>[nb_patches];
 			unsigned int num_patches_to_sample = 0;
 
-		// std::cout << "nb of rows " << patches.size << std::endl;
 		for(auto i = patches.begin(); i!=patches.end(); ++i) {
 			array_map<int64_t, patch<PerPatchData>>& row = patches.values[(long int) i.position];
 			
-			// std::cout << "	nb of columns " << row.size << std::endl;			
 			for(auto j = row.begin(); j != row.end(); ++j) {
 				patch_type& p = row.values[(long int) j.position];
-				// int banana = 0;
-				// for (int k = 0; k < p.items.length; k++) {
-				// 	if (p.items[k].item_type==0) banana ++;
-				// }
-				// std::cout << "		" << j.position << " " << banana << std::endl;
 
                 /* Iterate over the items of the patch */ 
 				for (unsigned int k = 0; k < p.items.length; k++) {
@@ -664,7 +656,6 @@ public:
                 }
 
                 /* get the neighborhoods of all the patches */
-                //if (!p.fixed) continue;
 				position patch_position = position(row.keys[j.position], patches.keys[i.position]);
 				patch_positions[num_patches_to_sample] = patch_position;
 				get_neighborhood(patch_position, i.position, j.position, neighborhoods[num_patches_to_sample++]);
@@ -674,11 +665,10 @@ public:
 		/* construct the Gibbs field and resample the patches at positions_to_sample */
 		gibbs_field<map<PerPatchData, ItemType>> field(
 			cache, patch_positions, neighborhoods, num_patches_to_sample, n);
-		/* resampling only if the items can vary*/
+		/* resampling only if some items can vary*/
 		if (cache.varying_item_type_count > 0) { 
-			for (unsigned int i = 0; i < cache.update_iterations; i++) {
-					field.sample(rng, current_time); 
-			}
+			for (unsigned int i = 0; i < cache.update_iterations; i++)
+				field.sample(rng, current_time);
 		}
 	}
 

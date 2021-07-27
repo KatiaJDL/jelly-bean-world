@@ -18,7 +18,6 @@
 #define JBW_GIBBS_FIELD_H_
 
 #include <stdio.h>
-#include <iostream>
 
 #include <core/random.h>
 #include <math/log.h>
@@ -49,6 +48,8 @@ struct gibbs_field_cache
 	const ItemType* item_types;
 	unsigned int item_type_count;
 
+	/* only varying items are updated during the simulation
+	if there is climate dynamics */
 	unsigned int* varying_item_types;
 	unsigned int varying_item_type_count;
 
@@ -278,14 +279,14 @@ bool init(gibbs_field_cache<ItemType>& cache,
 	cache.update_iterations = update_iterations;
 	cache.lakes_type = lakes_type;
 	cache.threshold_dryness=threshold_dryness;
-    cache.threshold_wetness=threshold_wetness;
+	cache.threshold_wetness=threshold_wetness;
 	cache.humidity_lakes=humidity_lakes;
 	cache.a_humidity=a_humidity;
 	cache.sigma_humidity=sigma_humidity;
 	cache.loop=loop;
-    cache.humidity_precipitations=humidity_precipitations;
-    cache.moore_amplitude=moore_amplitude;
-    cache.threshold_humidity=threshold_humidity;
+	cache.humidity_precipitations=humidity_precipitations;
+	cache.moore_amplitude=moore_amplitude;
+	cache.threshold_humidity=threshold_humidity;
 	cache.is_climate = is_climate;
 
 	return cache.init_helper(n);
@@ -387,18 +388,23 @@ public:
 			if (rng() % 2 == 0) {
 				/* propose creating a new item */
 				unsigned int item_type;
+
+				/* initialization of the map: all item types are allowed */
 				if (current_time==0) {
 					item_type = rng() % cache.item_type_count;
-					// cache.item_types[item_type].name
 				}
+				/* update of the map: only varying items are allowed */
 				else if (cache.varying_item_type_count > 0) {
 					if (cache.is_climate) {
+						/* Choice between resources (varying items) and lakes */
 						unsigned int choice = rng() % (cache.varying_item_type_count+1);
 						if (choice < cache.varying_item_type_count) {
 							item_type = cache.varying_item_types[choice];
 						}
 						else item_type = cache.lakes_type;
 					} else {
+						/* Only regeneration mechanism and no climate dynamics:
+						choice between varying items */
 						unsigned int choice = rng() % cache.varying_item_type_count;
 						item_type = cache.varying_item_types[choice];					
 					}
@@ -440,22 +446,18 @@ public:
 								new_position_occupied = true; break;
 							}
 							if (current_time==0) {
+								/* initialization with classic distribution */ 
 								log_acceptance_probability += cache.interaction(new_position, items[m].location, item_type, items[m].item_type);
 								log_acceptance_probability += cache.interaction(items[m].location, new_position, items[m].item_type, item_type);
 							}
-							else if (cache.is_climate && item_type==items[m].item_type && item_type !=cache.lakes_type){
+							else if (item_type==items[m].item_type) {
+								/* moore neighborhood */
 								float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
-								if (moore_proba > 0) moore++;							
+								if (moore_proba > 0) moore++;
 							}
-							else if (cache.is_climate && item_type==items[m].item_type && item_type ==cache.lakes_type){
-								float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
-								if (moore_proba > 0) moore++;		
-							}
-							else if (item_type==items[m].item_type){
-								float moore_proba = moore_interaction_fn(new_position, items[m].location, args);
-								if (moore_proba > 0) moore++;							
-							}
-							if (cache.is_climate && current_time >0 && items[m].item_type == cache.lakes_type) {
+
+							if (cache.is_climate && current_time > 0 && items[m].item_type == cache.lakes_type) {
+								/* Computation of humidity */
 								float* gaussian_args = new float[2];
 								gaussian_args[0] = cache.sigma_humidity; gaussian_args[1] = cache.a_humidity;
 								log_humidity +=gaussian_interaction_fn(new_position, items[m].location, gaussian_args);
@@ -467,17 +469,22 @@ public:
 					delete(args);
 					if (!new_position_occupied) {
 						if (current_time == 0) {
+							/* initialization with classic distribution */
 							log_acceptance_probability += cache.intensity(new_position, item_type);
 						}
 						else {
 							/* Moore interaction function */
 							if (moore==0) log_acceptance_probability += -500.0f;
 							else log_acceptance_probability += cache.moore_amplitude*(9-moore)/9;
+
+							/* regeneration rate*/
 							float r = 0.0;
 							float real_intensity = log(current.items.length) - LOG_N_SQUARED;
 
 							if (cache.is_climate) {
+								/* Final computation of humidity */
 								log_humidity = cache.humidity_lakes* log_humidity + cache.humidity_precipitations* cache.precipitations(new_position, current_time);
+								
 								if (item_type==cache.lakes_type) {
 									r = cache.precipitations(new_position, current_time);
 									if (r>cache.threshold_wetness && log_humidity < cache.threshold_humidity) {
@@ -490,9 +497,10 @@ public:
 								}
 							}
 							else {
-								/* New intensity function */
+								/* If climate dynamics not activated, user_defined regeneration rate */
 								r = cache.regeneration(new_position, current_time/cache.update_frequency, item_type);
 							}
+							/* New intensity function */
 							log_acceptance_probability += log(1+r/100) + real_intensity;
 						}
 
@@ -518,6 +526,7 @@ public:
 				const position old_position = current.items[item_index].location;
 
 				if (current_time !=0) {
+					/* deletion only with climate dynamics activated during update */
 					if (old_item_type!=cache.lakes_type || !cache.is_climate) old_item_type = UINT_MAX;
 				}
 				int moore = 0;
@@ -549,17 +558,20 @@ public:
 						const auto& items = old_neighborhood[j]->items;
 						for (unsigned int m = 0; m < items.length; m++) {
 							if (current_time==0) {
+								/* initialization with classic distribution */ 
 								log_acceptance_probability -= cache.interaction(old_position, items[m].location, old_item_type, items[m].item_type);
 								log_acceptance_probability -= cache.interaction(items[m].location, old_position, items[m].item_type, old_item_type);
 							}
-							else if (cache.is_climate && old_item_type==items[m].item_type && old_item_type ==cache.lakes_type){
+							else if (cache.is_climate && old_item_type==items[m].item_type){
+								/* moore neighborhood */
 								float moore_proba = moore_interaction_fn(old_position, items[m].location, args);
 								if (moore_proba > 0) moore++;		
 							}
 							if (cache.is_climate && current_time >0 && items[m].item_type == cache.lakes_type) {
+								/* Computation of humidity */
 								float* gaussian_args = new float[2];
 								gaussian_args[0] = cache.sigma_humidity; gaussian_args[1] = cache.a_humidity;
-								log_humidity +=gaussian_interaction_fn(old_position, items[m].location, gaussian_args);
+								log_humidity += gaussian_interaction_fn(old_position, items[m].location, gaussian_args);
 								delete(gaussian_args);
 							}
 						}
@@ -570,20 +582,21 @@ public:
 						if (moore == 0) log_acceptance_probability += -500.0f;
 						else log_acceptance_probability -= cache.moore_amplitude*(9-moore)/9;
 
+						/* Final computation of humidity */
 						log_humidity = cache.humidity_lakes* log_humidity + cache.humidity_precipitations* cache.precipitations(old_position, current_time);
 						float real_intensity = log(current.items.length) - LOG_N_SQUARED;
-						float r = precipitations(old_position, current_time);
+						/* regeneration rate*/
+						float r = cache.precipitations(old_position, current_time);
 						if (r<cache.threshold_dryness && log_humidity < cache.threshold_humidity) {
 							r -= cache.loop*log_humidity;
 						} 
 						else r = 0;
+						/* New intensity function */
 						log_acceptance_probability -= log(1+r/100) - real_intensity;					
 					}
-					else if (cache.is_climate) {
-						log_acceptance_probability -= cache.intensity(old_position, old_item_type);
-						if (moore!=0) std::cout << log_acceptance_probability << std::endl; 
-					}
+					/* initialization with classic distribution */
 					else log_acceptance_probability -= cache.intensity(old_position, old_item_type);
+					
 					/* add log probability of inverse proposal */
 					log_acceptance_probability += -LOG_ITEM_TYPE_COUNT - LOG_N_SQUARED;
 

@@ -863,6 +863,8 @@ static inline void import_errors() {
  *                  - (float) The importance of moore neighborhood in items regeneration.
  *                  - (float) The threshold in humidity for creation of water cells 
  *                    (above, no creation)
+ *                  - (int) The ID of the precipitations function.
+ *                  - (list of float) The arguments to the precipitations function.
  *                  - (function) The function to invoke when the simulator
  *                    advances time.
  *
@@ -902,7 +904,7 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
     PyObject* py_precipitations_fn_args;
     PyObject* py_callback;
     if (!PyArg_ParseTuple(
-      args, "IIOOOIIIIIOOIfffIIIOIfffffffffIOO", &seed, &config.max_steps_per_movement,
+      args, "IIOOOIIIIIOOIfffIIIOIfffffffffIOsO", &seed, &config.max_steps_per_movement,
       &py_allowed_movement_directions, &py_allowed_turn_directions, &py_no_op_allowed,
       &config.scent_dimension, &config.color_dimension, &config.vision_range,
       &config.patch_size, &config.mcmc_iterations, &py_items, &py_agent_color,
@@ -941,17 +943,6 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
             return NULL;
         }
     config.is_climate = (py_climate == Py_True);
-
-    // pair<float*, Py_ssize_t> precipitations_fn_args = PyArg_ParseFloatList(py_precipitations_fn_args);
-    // config.precipitations_fn.fn = get_precipitations_fn((precipitations_fns) py_precipitations_fn,
-    //         precipitations_fn_args.key, (unsigned int) precipitations_fn_args.value);
-    // if (config.precipitations_fn.fn == NULL) {
-    //     PyErr_SetString(PyExc_ValueError, "Invalid precipitations"
-    //             " function arguments in the call to 'simulator_c.new'.");
-    //     return NULL;
-    // }
-    // config.precipitations_fn.args = precipitations_fn_args.key;
-    // config.precipitations_fn.arg_count = (unsigned int) precipitations_fn_args.value;
 
     PyObject *py_items_iter = PyObject_GetIter(py_items);
     if (!py_items_iter) {
@@ -1054,9 +1045,7 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
         }
         new_item.precipitations_fn.args = precipitations_fn_args.key;
         new_item.precipitations_fn.arg_count = (unsigned int) precipitations_fn_args.value;
-
         config.item_types.length += 1;
-
     }
 
     for (unsigned int i = 0; i < (unsigned int) direction::COUNT; i++)
@@ -1080,7 +1069,6 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
         return NULL;
     }
     import_errors();
-
     return PyLong_FromVoidPtr(sim);
 }
 
@@ -2679,79 +2667,6 @@ static PyObject* simulator_is_active(PyObject *self, PyObject *args) {
     }
 }
 
-/**
- * Retrieves the x coordinates of the given list agents in the simulation.
- *
- * \param   self    Pointer to the Python object calling this method.
- * \param   args    Arguments:
- *                  - Handle to the native simulator object as a PyLong.
- *                  - Handle to the native client object as a PyLong. If this
- *                    is None, `get_agent_states` is directly invoked on the
- *                    simulator object. Otherwise, the client sends a
- *                    get_agent_states message to the server and waits for its
- *                    response.
- *                  - (list of ints) A list of agent IDs whose states to query.
- * \returns A Python list of x coordinates, parallel to the given list of IDs.
- */
-static PyObject* simulator_get_x_coordinates(PyObject *self, PyObject *args) {
-    PyObject* py_sim_handle;
-    PyObject* py_client_handle;
-    PyObject* py_agent_ids;
-    if (!PyArg_ParseTuple(args, "OOO", &py_sim_handle, &py_client_handle, &py_agent_ids))
-        return NULL;
-    if (!PyList_Check(py_agent_ids)) {
-        PyErr_SetString(PyExc_TypeError, "'agent_ids' must be a list.\n");
-        return NULL;
-    }
-
-    size_t agent_count = (size_t) PyList_Size(py_agent_ids);
-    uint64_t* agent_ids = (uint64_t*) malloc(max((size_t) 1, sizeof(uint64_t) * agent_count));
-    if (agent_ids == nullptr) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-    for (size_t i = 0; i < agent_count; i++)
-        agent_ids[i] = PyLong_AsUnsignedLongLong(PyList_GetItem(py_agent_ids, i));
-
-    if (py_client_handle == Py_None) {
-        /* the simulation is local, so call get_agent_states directly */
-        agent_state** agent_states = (agent_state**) malloc(max((size_t) 1, sizeof(agent_state*) * agent_count));
-        if (agent_states == nullptr) {
-            free(agent_ids);
-            PyErr_NoMemory();
-            return NULL;
-        }
-
-        simulator<py_simulator_data>* sim_handle =
-                (simulator<py_simulator_data>*) PyLong_AsVoidPtr(py_sim_handle);
-        sim_handle->get_agent_states(agent_states, agent_ids, agent_count);
-
-        PyObject* py_x_coordinates = PyList_New(agent_count);
-        if (py_x_coordinates == NULL) {
-            fprintf(stderr, "simulator_get_x_coordinates ERROR: PyList_New returned NULL.\n");
-            for (size_t i = 0; i < agent_count; i++)
-                if (agent_states[i] != nullptr) agent_states[i]->lock.unlock();
-            free(agent_ids); free(agent_states);
-            return NULL;
-        }
-        for (size_t i = 0; i < agent_count; i++) {
-            if (agent_states[i] == nullptr) {
-                Py_INCREF(Py_None);
-                PyList_SetItem(py_x_coordinates, i, Py_None);
-            } else {
-                PyList_SetItem(py_x_coordinates, i, PyLong_FromUnsignedLongLong(agent_states[i]->current_position.x));
-                agent_states[i]->lock.unlock();
-            }
-        }
-        free(agent_ids);
-        free(agent_states);
-        return py_x_coordinates;
-    } else {
-        // We will handle the remote case later
-        return NULL;
-    }
-}
-
 } /* namespace jbw */
 
 static PyMethodDef SimulatorMethods[] = {
@@ -2780,7 +2695,6 @@ static PyMethodDef SimulatorMethods[] = {
     {"agent_ids",  jbw::simulator_agent_ids, METH_VARARGS, "Returns a list of the IDs of all agents in the simulation environment."},
     {"agent_states",  jbw::simulator_agent_states, METH_VARARGS, "Returns a list of the agent states with the specified IDs in the simulation environment."},
     {"set_active",  jbw::simulator_set_active, METH_VARARGS, "Sets whether the agent is active or inactive."},
-    {"get_x_coordinates", jbw::simulator_get_x_coordinates, METH_VARARGS, "Returns a list of x coordinates of the given agents"},
     {"is_active",  jbw::simulator_is_active, METH_VARARGS, "Gets whether the agent is active or inactive."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
