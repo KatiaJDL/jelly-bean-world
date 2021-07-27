@@ -57,7 +57,7 @@ class SimulatorConfig(object):
       decay_param, diffusion_param, deleted_item_lifetime, seed=0, 
       update_frequency=5, update_iterations=None, climate = False, 
       lakes_name = "lake", threshold_dryness = 70, threshold_wetness = 30,
-	  humidity_lakes = 1.5, a_humidity = 2, sigma_humidity = 10, loop = 0.46,
+	    humidity_lakes = 1.5, a_humidity = 2, sigma_humidity = 10, loop = 0.46,
       humidity_precipitations = 0, moore_amplitude = -3.5, threshold_humidity = 150,
       precipitations_fn = 1, precipitations_fn_args = [50]):
     """Creates a new simulator configuration.
@@ -116,8 +116,6 @@ class SimulatorConfig(object):
                                    dynamics by the Gibbs sampler for updating the 
                                    patches in the map.
       precipitations_fn_args       A list of float arguments to precipitations_fn.
-      log_file_name                Name of the file to save the quantity of items 
-                                   at each update.
     """
     assert len(items) > 0, 'A non-empty list of items must be provided.'
     self.max_steps_per_movement = max_steps_per_movement
@@ -293,9 +291,9 @@ class Simulator(object):
         sim_config.decay_param, sim_config.diffusion_param, sim_config.deleted_item_lifetime, 
         sim_config.update_frequency, sim_config.update_iterations, sim_config.climate, sim_config.lakes_type,
         sim_config.threshold_dryness, sim_config.threshold_wetness, sim_config.humidity_lakes,
-		sim_config.a_humidity, sim_config.sigma_humidity, sim_config.loop, sim_config.humidity_precipitations,
+		    sim_config.a_humidity, sim_config.sigma_humidity, sim_config.loop, sim_config.humidity_precipitations,
         sim_config.moore_amplitude, sim_config.threshold_humidity, sim_config.precipitations_fn,
-        sim_config.precipitations_fn_args,self._step_callback)
+        sim_config.precipitations_fn_args, self._step_callback)
       if is_server:
         self._server_handle = simulator_c.start_server(
           self._handle, port, conn_queue_capacity, num_workers, default_client_permissions)

@@ -505,8 +505,6 @@ struct simulator_config {
     /* parameters for climate dynamics */
     bool is_climate;
 
-    // energy_function<precipitations_function> precipitations_fn;
-
     float threshold_dryness;
     float threshold_wetness;
 	float humidity_lakes;
@@ -2334,7 +2332,7 @@ private:
                 }
             }
         }
-        std::ofstream myFile("Log/items_"+datetime(date)+".txt", std::ios::app);
+        std::ofstream myFile("items_"+datetime(date)+".txt", std::ios::app);
         if (myFile) {
             myFile << "[" << nb_items[0];
             if (config.item_types.length > 1) {

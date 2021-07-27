@@ -45,7 +45,7 @@ enum class regeneration_fns : regeneration_fns_type {
 
 typedef uint64_t precipitations_fns_type;
 enum class precipitations_fns : precipitations_fns_type {
-	ZERO = 0, CONSTANT, CUSTOM
+	ZERO = 0, CONSTANT, CYCLE, CUSTOM
 };
 
 float zero_intensity_fn(const position pos, const float* args) {
@@ -337,6 +337,12 @@ float constant_precipitations_fn(const uint64_t time, const position pos, const 
 	return args[0];
 }
 
+float cycle_precipitations_fn(const uint64_t time, const position pos, const float* args) {
+	if (time%int(args[2]+args[3])<args[2])
+		return args[0];
+	else return args[1];
+}
+
 float custom_precipitations_fn(const uint64_t time, const position pos, const float* args) {
 	return args[time];
 }
@@ -356,6 +362,12 @@ precipitations_function get_precipitations_fn(precipitations_fns type, const flo
 			return NULL;
 		}
 		return constant_precipitations_fn;
+	case precipitations_fns::CYCLE:
+		if (num_args != 4) {
+			fprintf(stderr, "get_precipitations_fn ERROR: A cycle precipitations function requires four arguments.");
+			return NULL;
+		}
+		return custom_precipitations_fn;
 	case precipitations_fns::CUSTOM:
 		if (num_args == 0) {
 			fprintf(stderr, "get_precipitations_fn ERROR: A custom precipitations function requires at least an argument.");
@@ -372,6 +384,8 @@ precipitations_fns get_precipitations_fn(precipitations_function function) {
 		return precipitations_fns::ZERO;
 	} else if (function == constant_precipitations_fn) {
 		return precipitations_fns::CONSTANT;
+	} else if (function == cycle_precipitations_fn) {
+		return precipitations_fns::CYCLE;
 	} else if (function == custom_precipitations_fn) {
 		return precipitations_fns::CUSTOM;
 	} else {
@@ -480,6 +494,7 @@ inline bool read(precipitations_function& function, Stream& in) {
 	switch ((precipitations_fns) c) {
 	case precipitations_fns::ZERO:          function = zero_precipitations_fn; return true;
 	case precipitations_fns::CONSTANT: 		function = constant_precipitations_fn; return true;
+	case precipitations_fns::CYCLE:			function = cycle_precipitations_fn; return true;
 	case precipitations_fns::CUSTOM:        function = custom_precipitations_fn; return true;
 	}
 	fprintf(stderr, "read ERROR: Unrecognized precipitations function.\n");
@@ -492,6 +507,8 @@ inline bool write(const precipitations_function& function, Stream& out) {
 		return write((precipitations_fns_type) precipitations_fns::ZERO, out);
 	} else if (function == constant_precipitations_fn) {
 		return write((precipitations_fns_type) precipitations_fns::CONSTANT, out);
+	} else if (function == cycle_precipitations_fn) {
+		return write((precipitations_fns_type) precipitations_fns::CYCLE, out);
 	} else if (function == custom_precipitations_fn) {
 		return write((precipitations_fns_type) precipitations_fns::CUSTOM, out);
 	} else {

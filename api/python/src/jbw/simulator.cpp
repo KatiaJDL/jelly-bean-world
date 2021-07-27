@@ -904,7 +904,7 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
     PyObject* py_precipitations_fn_args;
     PyObject* py_callback;
     if (!PyArg_ParseTuple(
-      args, "IIOOOIIIIIOOIfffIIIOIfffffffffIOsO", &seed, &config.max_steps_per_movement,
+      args, "IIOOOIIIIIOOIfffIIIOIfffffffffIOO", &seed, &config.max_steps_per_movement,
       &py_allowed_movement_directions, &py_allowed_turn_directions, &py_no_op_allowed,
       &config.scent_dimension, &config.color_dimension, &config.vision_range,
       &config.patch_size, &config.mcmc_iterations, &py_items, &py_agent_color,
