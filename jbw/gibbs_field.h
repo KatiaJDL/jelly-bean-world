@@ -113,6 +113,10 @@ struct gibbs_field_cache
 		else return item_types[item_type].regeneration_fn.fn(pos, time, item_types[item_type].regeneration_fn.args);
 	}
 
+	inline float precipitations(const position& pos, const uint64_t time) {
+		return item_types[0].precipitations_fn.fn(time%item_types[0].precipitations_fn.arg_count, pos, item_types[0].precipitations_fn.args);
+	}
+
 	inline float interaction(
 			const position& first_position, const position& second_position,
 			unsigned int first_item_type, unsigned int second_item_type)
@@ -473,9 +477,9 @@ public:
 							float real_intensity = log(current.items.length) - LOG_N_SQUARED;
 
 							if (cache.is_climate) {
-								log_humidity = cache.humidity_lakes* log_humidity + cache.humidity_precipitations* precipitations(new_position, current_time);
+								log_humidity = cache.humidity_lakes* log_humidity + cache.humidity_precipitations* cache.precipitations(new_position, current_time);
 								if (item_type==cache.lakes_type) {
-									r = precipitations(new_position, current_time);
+									r = cache.precipitations(new_position, current_time);
 									if (r>cache.threshold_wetness && log_humidity < cache.threshold_humidity) {
 										r -= cache.loop*log_humidity;
 									} 
@@ -566,7 +570,7 @@ public:
 						if (moore == 0) log_acceptance_probability += -500.0f;
 						else log_acceptance_probability -= cache.moore_amplitude*(9-moore)/9;
 
-						log_humidity = cache.humidity_lakes* log_humidity + cache.humidity_precipitations* precipitations(old_position, current_time);
+						log_humidity = cache.humidity_lakes* log_humidity + cache.humidity_precipitations* cache.precipitations(old_position, current_time);
 						float real_intensity = log(current.items.length) - LOG_N_SQUARED;
 						float r = precipitations(old_position, current_time);
 						if (r<cache.threshold_dryness && log_humidity < cache.threshold_humidity) {

@@ -22,6 +22,7 @@ from .direction import Direction
 import os
 
 from .item import IntensityFunction, InteractionFunction, RegenerationFunction
+from .precipitations import PrecipitationsFunction
 
 __all__ = [
     "MPIError",
@@ -86,7 +87,9 @@ class SimulatorConfig(object):
 		loop = 0.46,
         humidity_precipitations = 0,
         moore_amplitude = -3.5,
-        threshold_humidity = 150
+        threshold_humidity = 150,
+        precipitations_fn = 1,
+        precipitations_fn_args = [50]
     ):
         """Creates a new simulator configuration.
 
@@ -208,6 +211,8 @@ class SimulatorConfig(object):
         self.humidity_precipitations = humidity_precipitations
         self.moore_amplitude = moore_amplitude
         self.threshold_humidity = threshold_humidity
+        self.precipitations_fn = precipitations_fn
+        self.precipitations_fn_args = precipitations_fn_args
 
 class Simulator(object):
     """Environment simulator.
@@ -388,6 +393,8 @@ class Simulator(object):
                 sim_config.humidity_precipitations,
                 sim_config.moore_amplitude,
                 sim_config.threshold_humidity,
+                sim_config.precipitations_fn,
+                sim_config.precipitations_fn_args,
                 self._step_callback,
             )
             if is_server:

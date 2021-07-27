@@ -25,6 +25,7 @@ namespace jbw {
 typedef float (*intensity_function)(const position, const float*);
 typedef float (*interaction_function)(const position, const position, const float*);
 typedef float (*regeneration_function)(const position, const uint64_t, const float*);
+typedef float (*precipitations_function)(const uint64_t, const position, const float*);
 
 
 typedef uint64_t intensity_fns_type;
@@ -39,6 +40,11 @@ enum class interaction_fns : interaction_fns_type {
 
 typedef uint64_t regeneration_fns_type;
 enum class regeneration_fns : regeneration_fns_type {
+	ZERO = 0, CONSTANT, CUSTOM
+};
+
+typedef uint64_t precipitations_fns_type;
+enum class precipitations_fns : precipitations_fns_type {
 	ZERO = 0, CONSTANT, CUSTOM
 };
 
@@ -323,6 +329,57 @@ regeneration_fns get_regeneration_fn(regeneration_function function) {
 	}
 }
 
+float zero_precipitations_fn(const uint64_t time, const position pos, const float* args) {
+	return 0.0;
+}
+
+float constant_precipitations_fn(const uint64_t time, const position pos, const float* args) {
+	return args[0];
+}
+
+float custom_precipitations_fn(const uint64_t time, const position pos, const float* args) {
+	return args[time];
+}
+
+precipitations_function get_precipitations_fn(precipitations_fns type, const float* args, unsigned int num_args)
+{
+	switch (type) {
+	case precipitations_fns::ZERO:
+		if (num_args != 0) {
+			fprintf(stderr, "get_precipitations_fn ERROR: A zero precipitations function requires zero arguments.");
+			return NULL;
+		}
+		return zero_precipitations_fn;
+	case precipitations_fns::CONSTANT:
+		if (num_args == 0) {
+			fprintf(stderr, "get_precipitations_fn ERROR: A constant precipitations function requires an argument.");
+			return NULL;
+		}
+		return constant_precipitations_fn;
+	case precipitations_fns::CUSTOM:
+		if (num_args == 0) {
+			fprintf(stderr, "get_precipitations_fn ERROR: A custom precipitations function requires at least an argument.");
+			return NULL;
+		}
+		return custom_precipitations_fn;
+	}
+	fprintf(stderr, "get_precipitations_fn ERROR: Unknown intensity function type.");
+	return NULL;
+}
+
+precipitations_fns get_precipitations_fn(precipitations_function function) {
+	if (function == zero_precipitations_fn) {
+		return precipitations_fns::ZERO;
+	} else if (function == constant_precipitations_fn) {
+		return precipitations_fns::CONSTANT;
+	} else if (function == custom_precipitations_fn) {
+		return precipitations_fns::CUSTOM;
+	} else {
+		fprintf(stderr, "get_precipitations_fn ERROR: Unknown precipitations_function.");
+		exit(EXIT_FAILURE);
+	}
+}
+
 template<typename Stream>
 inline bool read(intensity_function& function, Stream& in) {
 	intensity_fns_type c;
@@ -416,6 +473,33 @@ inline bool write(const regeneration_function& function, Stream& out) {
 	}
 }
 
+template<typename Stream>
+inline bool read(precipitations_function& function, Stream& in) {
+	precipitations_fns_type c;
+	if (!read(c, in)) return false;
+	switch ((precipitations_fns) c) {
+	case precipitations_fns::ZERO:          function = zero_precipitations_fn; return true;
+	case precipitations_fns::CONSTANT: 		function = constant_precipitations_fn; return true;
+	case precipitations_fns::CUSTOM:        function = custom_precipitations_fn; return true;
+	}
+	fprintf(stderr, "read ERROR: Unrecognized precipitations function.\n");
+	return false;
+}
+
+template<typename Stream>
+inline bool write(const precipitations_function& function, Stream& out) {
+	if (function == zero_precipitations_fn) {
+		return write((precipitations_fns_type) precipitations_fns::ZERO, out);
+	} else if (function == constant_precipitations_fn) {
+		return write((precipitations_fns_type) precipitations_fns::CONSTANT, out);
+	} else if (function == custom_precipitations_fn) {
+		return write((precipitations_fns_type) precipitations_fns::CUSTOM, out);
+	} else {
+		fprintf(stderr, "write ERROR: Unrecognized precipitations function.\n");
+		return false;
+	}
+}
+
 inline bool is_constant(const interaction_function function) {
 	return function == zero_interaction_fn;
 }
@@ -457,9 +541,9 @@ float precipitations(const position pos, const uint64_t time) {
 	// float period = 600;
 	// return 50 + 45*sin(2*3.14*time/period);
 	// return 20;
-	if (time % 8000 < 4000) return 5;
-	else return 80;
-	// return 80;
+	// if (time % 8000 < 4000) return 5;
+	// else return 80;
+	return 80;
 }
 
 } /* namespace jbw */

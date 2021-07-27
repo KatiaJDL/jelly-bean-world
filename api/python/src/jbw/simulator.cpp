@@ -848,19 +848,21 @@ static inline void import_errors() {
  *                    performed for re-sampling each patch of the map during 
  *                    the simulation.
  *                  - (bool) Whether this environment designed for climate dynamics.
- *                  - (float) The threshold for deletion of water cells (above,
- *                    no deletion)
- *                  - (float) The threshold for creation of water cells (above,
- *                    no creation)
- *                  - (float) The probability for water cells to disappear when 
- *                    the precipitation rate is 0% and the cell is isolated.
- *                  - (float) Part of lakes contribution for humidity (between 0 and 1).
+ *                  - (int) The item type of lakes for climate dynamics
+ *                  - (float) The threshold in precipitations for deletion of water 
+ *                    cells (above, no deletion)
+ *                  - (float) The threshold in precipitations for creation of water 
+ *                    cells (above, no creation)
+ *                  - (float) The influence of lakes on humidity.
  *                  - (float) The amplitude of the normal distribution used to
  *                    compute humidity due to lakes.
  *                  - (float) The standard deviation of the normal distribution
  *                    used to compute humidity due to lakes.
- *                  - (float) The proportion of humidity taken into account for
- *                    lakes evolution (between 0 and 1).
+ *                  - (float) The influence of humidity in lakes evolution.
+ *                  - (float) The influence of precipitations on humidity.
+ *                  - (float) The importance of moore neighborhood in items regeneration.
+ *                  - (float) The threshold in humidity for creation of water cells 
+ *                    (above, no creation)
  *                  - (function) The function to invoke when the simulator
  *                    advances time.
  *
@@ -896,9 +898,11 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
     unsigned int seed;
     unsigned int collision_policy;
     PyObject* py_climate;
+    unsigned int py_precipitations_fn;
+    PyObject* py_precipitations_fn_args;
     PyObject* py_callback;
     if (!PyArg_ParseTuple(
-      args, "IIOOOIIIIIOOIfffIIIOIfffffffffO", &seed, &config.max_steps_per_movement,
+      args, "IIOOOIIIIIOOIfffIIIOIfffffffffIOO", &seed, &config.max_steps_per_movement,
       &py_allowed_movement_directions, &py_allowed_turn_directions, &py_no_op_allowed,
       &config.scent_dimension, &config.color_dimension, &config.vision_range,
       &config.patch_size, &config.mcmc_iterations, &py_items, &py_agent_color,
@@ -908,7 +912,7 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
       &config.threshold_dryness, &config.threshold_wetness, &config.humidity_lakes, 
       &config.a_humidity, &config.sigma_humidity, &config.loop, 
       &config.humidity_precipitations, &config.moore_amplitude, &config.threshold_humidity, 
-      &py_callback)) {
+      &py_precipitations_fn, &py_precipitations_fn_args, &py_callback)) {
         fprintf(stderr, "Invalid argument types in the call to 'simulator_c.new'.\n");
         return NULL;
     }
@@ -932,7 +936,22 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
             " list with length equal to the number of possible movement directions.\n");
         return NULL;
     }
+    else if (!PyList_Check(py_precipitations_fn_args)) {
+            PyErr_SetString(PyExc_TypeError, "'precipitations_fn_args' must be lists.\n");
+            return NULL;
+        }
     config.is_climate = (py_climate == Py_True);
+
+    // pair<float*, Py_ssize_t> precipitations_fn_args = PyArg_ParseFloatList(py_precipitations_fn_args);
+    // config.precipitations_fn.fn = get_precipitations_fn((precipitations_fns) py_precipitations_fn,
+    //         precipitations_fn_args.key, (unsigned int) precipitations_fn_args.value);
+    // if (config.precipitations_fn.fn == NULL) {
+    //     PyErr_SetString(PyExc_ValueError, "Invalid precipitations"
+    //             " function arguments in the call to 'simulator_c.new'.");
+    //     return NULL;
+    // }
+    // config.precipitations_fn.args = precipitations_fn_args.key;
+    // config.precipitations_fn.arg_count = (unsigned int) precipitations_fn_args.value;
 
     PyObject *py_items_iter = PyObject_GetIter(py_items);
     if (!py_items_iter) {
@@ -1025,6 +1044,17 @@ static PyObject* simulator_new(PyObject *self, PyObject *args)
         }
         new_item.regeneration_fn.args = regeneration_fn_args.key;
         new_item.regeneration_fn.arg_count = (unsigned int) regeneration_fn_args.value;
+        pair<float*, Py_ssize_t> precipitations_fn_args = PyArg_ParseFloatList(py_precipitations_fn_args);
+        new_item.precipitations_fn.fn = get_precipitations_fn((precipitations_fns) py_precipitations_fn,
+                precipitations_fn_args.key, (unsigned int) precipitations_fn_args.value);
+        if (new_item.precipitations_fn.fn == NULL) {
+            PyErr_SetString(PyExc_ValueError, "Invalid precipitations"
+                    " function arguments in the call to 'simulator_c.new'.");
+        return NULL;
+        }
+        new_item.precipitations_fn.args = precipitations_fn_args.key;
+        new_item.precipitations_fn.arg_count = (unsigned int) precipitations_fn_args.value;
+
         config.item_types.length += 1;
 
     }

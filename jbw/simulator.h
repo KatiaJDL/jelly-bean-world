@@ -190,6 +190,7 @@ struct item_properties {
     energy_function<intensity_function> intensity_fn;
     energy_function<interaction_function>* interaction_fns;
     energy_function<regeneration_function> regeneration_fn;
+    energy_function<precipitations_function> precipitations_fn;
 
     static inline void free(item_properties& properties, unsigned int item_type_count) {
         core::free(properties.name);
@@ -202,8 +203,25 @@ struct item_properties {
             core::free(properties.interaction_fns[i]);
         core::free(properties.interaction_fns);
         core::free(properties.regeneration_fn);
+        core::free(properties.precipitations_fn);
     }
 };
+
+// inline bool init_precipitations_fn(
+//         energy_function<precipitations_function> function) 
+// {
+//     if (function.args == NULL) {
+//         function.fn = zero_precipitations_fn;
+//         function.args = (float*) malloc(1);
+//         if (function.args == NULL) {
+//             fprintf(stderr, "init_interaction_fns ERROR: Out of memory.\n");
+//             if (function.args != NULL) free(function);
+//             return false;
+//         }
+//         function.arg_count = 0;
+//     }
+//     return true;
+// }
 
 inline bool init_interaction_fns(
         energy_function<interaction_function>* fns,
@@ -259,7 +277,7 @@ inline bool init(
         const float* scent, const float* color, const unsigned int* required_item_counts,
         const unsigned int* required_item_costs, bool blocks_movement, float visual_occlusion,
         const energy_function<intensity_function>& intensity_fn, const InteractionFunctionInfo& interaction_fns,
-        const energy_function<regeneration_function>& regeneration_fn,
+        const energy_function<regeneration_function>& regeneration_fn, const energy_function<precipitations_function>& precipitations_fn,
         unsigned int scent_dimension, unsigned int color_dimension, unsigned int item_type_count,
         const unsigned int lifetime)
 {
@@ -315,6 +333,14 @@ inline bool init(
         core::free(properties.intensity_fn); 
         core::free(properties.regeneration_fn); core::free(properties.interaction_fns); return false;
     }
+    if (!init(properties.precipitations_fn, precipitations_fn)) {
+    // if (!init_precipitations_fn(properties.precipitations_fn)) {
+        core::free(properties.name); core::free(properties.scent); core::free(properties.color);
+        core::free(properties.required_item_counts); core::free(properties.required_item_costs);
+        core::free(properties.intensity_fn); 
+        core::free(properties.regeneration_fn); core::free(properties.interaction_fns); 
+        core::free(properties.precipitations_fn); return false;
+    }
 
     for (unsigned int i = 0; i < scent_dimension; i++)
         properties.scent[i] = scent[i];
@@ -341,7 +367,8 @@ inline bool init(
     return init(properties, src.name.data, src.name.length,
         src.scent, src.color, src.required_item_counts,
         src.required_item_costs, src.blocks_movement, src.visual_occlusion,
-        src.intensity_fn, src.interaction_fns, src.regeneration_fn, scent_dimension,
+        src.intensity_fn, src.interaction_fns, src.regeneration_fn, 
+        src.precipitations_fn, scent_dimension,
         color_dimension, item_type_count, src.lifetime);
 }
 
@@ -393,6 +420,7 @@ inline bool read(item_properties& properties, Stream& in,
      || !read(properties.visual_occlusion, in)
      || !read(properties.intensity_fn, in)
      || !read(properties.regeneration_fn, in)
+     || !read(properties.precipitations_fn, in)
      || !read(properties.lifetime, in))
     {
         free(properties.name); free(properties.scent); free(properties.color);
@@ -428,6 +456,7 @@ inline bool write(const item_properties& properties, Stream& out,
      || !write(properties.visual_occlusion, out)
      || !write(properties.intensity_fn, out)
      || !write(properties.regeneration_fn, out)
+     || !write(properties.precipitations_fn, out)
      || !write(properties.lifetime, out))
         return false;
 
@@ -463,124 +492,6 @@ inline bool write(const action_policy& type, Stream& out) {
 }
 
 /**
- * A structure containing the properties of the climate configuration
- */
-struct config_climate {
-    float threshold_dryness;
-    float threshold_wetness;
-	float humidity_lakes;
-	float a_humidity;
-	float sigma_humidity;
-	float loop;
-    float humidity_precipitations;
-    float moore_amplitude;
-    float threshold_humidity;
-
-    inline bool init_helper(const config_climate& src){
-        threshold_dryness = src.threshold_dryness;
-        threshold_wetness = src.threshold_wetness;
-        humidity_lakes = src.humidity_lakes;
-        a_humidity = src.a_humidity;
-        sigma_humidity = src.sigma_humidity;
-        loop = src.loop;
-        humidity_precipitations = src.humidity_precipitations;
-        moore_amplitude = src.moore_amplitude;
-        threshold_humidity = src.threshold_humidity;
-
-        return true;
-    }
-};
-
-/**
- * Initializes the properties of the climate configuration.
- *
- * \param   threshold_dryness     The threshold for deletion of water cells (above,
- *                                  no deletion)
- * \param   threshold_wetness     The threshold for creation of water cells (above,
- *                                  no creation)
- * \param   humidity_lakes        Lakes contribution for humidity
- * \param   a_humidity            Amplitude of the normal distribution used to
- *                                  compute humidity due to lakes.
- * \param   sigma_humidity        Standard deviation of the normal distribution
- *                                  used to compute humidity due to lakes.
- * \param   loop                  Proportion of humidity taken into account for
- *                                  lakes evolution
- * \param   humidity_precipitations         
- * \param   moore_amplitude
- * \param   threshold_humidity
- */
-template<typename T>
-inline bool init(
-        config_climate config,
-        float threshold_dryness,
-        float threshold_wetness,
-        float humidity_lakes,
-        float a_humidity,
-        float sigma_humidity,
-        float loop,
-        float humidity_precipitations,
-        float moore_amplitude,
-        float threshold_humidity)
-{
-    config.threshold_dryness = threshold_dryness;
-    config.threshold_wetness = threshold_wetness;
-    config.humidity_lakes = humidity_lakes;
-    config.a_humidity = a_humidity;
-    config.sigma_humidity = sigma_humidity;
-    config.loop = loop;
-    config.humidity_precipitations = humidity_precipitations;
-    config.moore_amplitude = moore_amplitude;
-    config.threshold_humidity = threshold_humidity;
-
-    std::cout << "init climate configuration" << std::endl;
-    std::cout << loop << std::endl;
-    
-    return true;
-}
-
-
-inline bool init(config_climate& config)
-{
-    return true;
-}
-
-inline bool init(config_climate& config, const config_climate& src)
-{
-    return config.init_helper(src);
-}
-
-template<typename Stream>
-bool read(config_climate& config, Stream& in) {
-    if (!read(config.threshold_dryness, in)
-     || !read(config.threshold_wetness, in)
-     || !read(config.humidity_lakes, in)
-     || !read(config.a_humidity, in)
-     || !read(config.sigma_humidity, in)
-     || !read(config.loop, in)
-     || !read(config.humidity_precipitations, in)
-     || !read(config.moore_amplitude, in)
-     || !read(config.threshold_humidity, in))
-        return false;
-    return true;
-}
-
-/**
- * Writes the given simulator_config `config` to the output stream `out`.
- */
-template<typename Stream>
-bool write(const config_climate& config, Stream& out) {
-    return write(config.threshold_dryness, out)
-        && write(config.threshold_wetness, out)
-        && write(config.humidity_lakes, out)
-        && write(config.a_humidity, out)
-        && write(config.sigma_humidity, out)
-        && write(config.loop, out)
-        && write(config.humidity_precipitations, out)
-        && write(config.moore_amplitude, out)
-        && write(config.threshold_humidity, out);
-}
-
-/**
  * Represents the configuration of a simulator. 
  */
 struct simulator_config {
@@ -608,6 +519,8 @@ struct simulator_config {
 
     /* parameters for climate dynamics */
     bool is_climate;
+
+    // energy_function<precipitations_function> precipitations_fn;
 
     float threshold_dryness;
     float threshold_wetness;
@@ -669,6 +582,7 @@ struct simulator_config {
     static inline void free(simulator_config& config) {
         config.free_helper();
         core::free(config.item_types);
+        // core::free(config.precipitations_fn);
     }
 
 private:
@@ -688,11 +602,16 @@ private:
             agent_color[i] = src.agent_color[i];
         no_op_allowed = src.no_op_allowed;
 
+        // if (!init_precipitations_fn(precipitations_fn)) {
+        //     core::free(agent_color); return false;
+        // }
+
         for (unsigned int i = 0; i < src.item_types.length; i++) {
             if (!init(item_types[i], src.item_types[i], src.scent_dimension, src.color_dimension, (unsigned int) src.item_types.length)) {
                 for (unsigned int j = 0; j < i; j++)
                     core::free(item_types[i], (unsigned int) src.item_types.length);
                 core::free(agent_color); return false;
+                // core::free(precipitations_fn); return false;
             }
         }
         item_types.length = src.item_types.length;
@@ -721,6 +640,9 @@ private:
         moore_amplitude = src.moore_amplitude;
         threshold_humidity = src.threshold_humidity;
         is_climate = src.is_climate;
+        // precipitations_fn = src.precipitations_fn;
+        // if (src.item_types.length > 0) 
+        //     item_types[0].precipitations_fn = precipitations_fn;
         return true;
     }
 
@@ -785,6 +707,7 @@ bool read(simulator_config& config, Stream& in) {
      || !read(config.moore_amplitude, in)
      || !read(config.threshold_humidity, in)
      || !read(config.is_climate, in))
+    //  || !read(config.precipitations_fn, in))
         return false;
 
     config.item_types.data = (item_properties*) malloc(max((size_t) 1, sizeof(item_properties) * config.item_types.length));
@@ -850,6 +773,7 @@ bool write(const simulator_config& config, Stream& out) {
         && write(config.moore_amplitude, out)
         && write(config.threshold_humidity, out)
         && write(config.is_climate, out);
+        // && write(config.precipitations_fn, out);
 }
 
 /**
