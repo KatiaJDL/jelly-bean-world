@@ -115,7 +115,9 @@ struct gibbs_field_cache
 	}
 
 	inline float precipitations(const position& pos, const uint64_t time) {
-		return item_types[0].precipitations_fn.fn(time%item_types[0].precipitations_fn.arg_count, pos, item_types[0].precipitations_fn.args);
+		if (is_custom(item_types[0].precipitations_fn.fn))
+			return item_types[0].precipitations_fn.fn(time%item_types[0].precipitations_fn.arg_count, pos, item_types[0].precipitations_fn.args);
+		else return item_types[0].precipitations_fn.fn(time, pos, item_types[0].precipitations_fn.args);
 	}
 
 	inline float interaction(

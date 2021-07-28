@@ -367,7 +367,7 @@ precipitations_function get_precipitations_fn(precipitations_fns type, const flo
 			fprintf(stderr, "get_precipitations_fn ERROR: A cycle precipitations function requires four arguments.");
 			return NULL;
 		}
-		return custom_precipitations_fn;
+		return cycle_precipitations_fn;
 	case precipitations_fns::CUSTOM:
 		if (num_args == 0) {
 			fprintf(stderr, "get_precipitations_fn ERROR: A custom precipitations function requires at least an argument.");
@@ -551,6 +551,10 @@ inline bool is_time_independent(const regeneration_function function) {
 
 inline bool is_custom(const regeneration_function function) {
 	return (function == custom_regeneration_fn);
+}
+
+inline bool is_custom(const precipitations_function function) {
+	return (function == custom_precipitations_fn);
 }
 
 } /* namespace jbw */
