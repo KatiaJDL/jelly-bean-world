@@ -154,6 +154,7 @@ class SimulatorConfig(object):
         assert (self.lakes_type is not None), "Lakes name must correspond to a item if climate dynamics are activated"
     else:
         self.update_frequency = 0
+        self.lakes_type = 0
     
     if update_iterations is not None:
             self.update_iterations = update_iterations
