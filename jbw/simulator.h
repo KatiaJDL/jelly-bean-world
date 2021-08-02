@@ -2458,6 +2458,34 @@ status init(simulator<SimulatorData>& sim,
         free(sim.requested_moves); free(sim.scent_model);
         return status::OUT_OF_MEMORY;
     }
+
+    /* Write config in log file */
+    std::ofstream myFile("items_"+datetime(sim.date)+".txt", std::ios::app);
+    if (myFile) {
+        myFile << "seed = " << seed;
+        myFile << ", climate = " << sim.config.is_climate;
+        myFile << ", lake_type = " << sim.config.lakes_type;
+        myFile << ", update_frequency = " << sim.config.update_frequency;
+        myFile << ", update_iterations = " << sim.config.update_iterations;
+        myFile << ", update_frequency = " << sim.config.update_frequency;
+        myFile << ", threshold_dryness = " << sim.config.threshold_dryness;
+        myFile << ", threshold_wetness = " << sim.config.threshold_wetness;
+        myFile << ", threshold_humidity = " << sim.config.threshold_humidity;
+        myFile << ", humidity_lakes = " << sim.config.humidity_lakes;
+        myFile << ", humidity_precipitations = " << sim.config.humidity_precipitations;
+        myFile << ", a_humidity = " << sim.config.a_humidity;
+        myFile << ", sigma_humidity = " << sim.config.sigma_humidity;
+        myFile << ", loop = " << sim.config.loop;
+        myFile << ", moore_amplitude = " << sim.config.moore_amplitude;
+        myFile << ", precipitations_fn = " << sim.config.item_types[0].precipitations_fn.fn;
+        myFile << ", precipitations_fn = " << sim.config.item_types[0].precipitations_fn.args;
+        myFile << "" << std::endl;
+    }
+    else {
+        std::cout << "ERROR: Impossible to open the log file." << std::endl;
+    }
+    myFile.close();
+
     new (&sim.simulator_lock) std::mutex();
     new (&sim.requested_move_lock) std::mutex();
     return status::OK;
