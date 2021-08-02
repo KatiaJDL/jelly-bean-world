@@ -2478,8 +2478,10 @@ status init(simulator<SimulatorData>& sim,
         myFile << ", loop = " << sim.config.loop;
         myFile << ", moore_amplitude = " << sim.config.moore_amplitude;
         myFile << ", precipitations_fn = " << sim.config.item_types[0].precipitations_fn.fn;
-        myFile << ", precipitations_fn = " << sim.config.item_types[0].precipitations_fn.args;
-        myFile << "" << std::endl;
+        myFile << ", precipitations_fn = [";
+        for (size_t i = 0; i < sim.config.item_types[0].precipitations_fn.arg_count; i++) 
+            myFile << sim.config.item_types[0].precipitations_fn.args[i] << " ";
+        myFile << "]" << std::endl;
     }
     else {
         std::cout << "ERROR: Impossible to open the log file." << std::endl;
