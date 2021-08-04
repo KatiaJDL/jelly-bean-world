@@ -2150,6 +2150,37 @@ public:
         return world;
     }
 
+    /**
+     * Compute the quantity of items present in the simulation. Upon sucess, `log` will
+     * contain a ointer to this state/
+     */
+    inline status compute_log(uint64_t*& log) {
+        log = (uint64_t*) malloc(sizeof(int64_t)* config.item_types.length);
+        if (log == nullptr) {
+            return status::OUT_OF_MEMORY;
+        }
+
+        for (size_t j =0; j < config.item_types.length; j++) {
+            log[j] = 0;
+        }
+        
+        for(auto i = world.patches.begin(); i!=world.patches.end(); ++i) {
+            array_map<int64_t, patch<patch_data>>& row = world.patches.values[(long int) i.position];
+                
+            for(auto j = row.begin(); j != row.end(); ++j) {
+                patch_type& p = row.values[(long int) j.position];
+                
+                for (size_t k = 0; k < p.items.length; k++) {
+                    for (size_t j =0; j < config.item_types.length; j++) {
+                        if (p.items[k].item_type==j) log[j] ++;
+                    }
+                }
+            }
+        }
+
+        return status::OK;
+    }
+
     static inline void free(simulator& s) {
         s.free_helper();
         core::free(s.agents);

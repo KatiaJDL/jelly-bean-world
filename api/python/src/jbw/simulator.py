@@ -445,6 +445,9 @@ class Simulator(object):
     """Returns the current simulation time."""
     return self._time
 
+  def compute_log(self):
+    return simulator_c.log(self._handle, self._client_handle)
+
   def _map(self, bottom_left, top_right):
     """Returns a list of tuples, each containing the state information of a
     patch in the map. Only the patches visible in the bounding box defined by

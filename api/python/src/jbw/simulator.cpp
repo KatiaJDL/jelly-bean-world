@@ -1209,6 +1209,54 @@ static PyObject* simulator_load(PyObject *self, PyObject *args)
 }
 
 /**
+ * Return infos about the simulation.
+ *
+ * \param   self    Pointer to the Python object calling this method.
+ * \param   args    A Python tuple containing the arguments to this function:
+ *                  - Handle to the native simulator object as a PyLong.
+ *                  - Handle to the native client object as a PyLong. If this
+ *                    is None, `add_agent` is directly invoked on the simulator
+ *                    object. Otherwise, the client sends an add_agent message
+ *                    to the server and waits for its response.
+ * \returns A Python tuple containing:
+ *          - The simulation time.
+ *          - A list of tuples containing the states of the agents governed by
+ *            this simulator (not including agents governed by other clients).
+ *            See `build_py_agent` for details on the contents of each tuple.
+ */
+static PyObject* simulator_log(PyObject *self, PyObject *args)
+{
+    PyObject* py_sim_handle;
+    PyObject* py_client_handle;
+    if (!PyArg_ParseTuple(args, "OO", &py_sim_handle, &py_client_handle)) {
+        fprintf(stderr, "Invalid server handle argument in the call to 'simulator_c.log'.\n");
+        return NULL;
+    }
+    if (py_client_handle == Py_None) {
+        /* the simulation is local, so call log directly */
+        simulator<py_simulator_data>* sim_handle =
+                (simulator<py_simulator_data>*) PyLong_AsVoidPtr(py_sim_handle);
+
+        uint64_t* log;
+        const simulator_config& config = sim_handle->get_config();
+        status result = sim_handle->compute_log(log);
+        if (result != status::OK) {
+            PyErr_SetString(add_agent_error, "Failed to compute log.");
+            return NULL;
+        }
+
+        npy_intp items_dim[] = {(npy_intp) config.item_types.length};
+        PyArrayObject* py_log = (PyArrayObject*) PyArray_SimpleNewFromData(1, items_dim, NPY_UINT64, log);
+        PyArray_ENABLEFLAGS(py_log, NPY_ARRAY_OWNDATA);
+        PyObject* to_return = Py_BuildValue("O", py_log);
+        Py_DECREF(py_log);
+        return to_return;
+    }
+
+    return NULL;
+}
+
+/**
  * Deletes a simulator and frees all memory allocated for that simulator.
  *
  * \param   self    Pointer to the Python object calling this method.
@@ -2696,6 +2744,7 @@ static PyMethodDef SimulatorMethods[] = {
     {"agent_states",  jbw::simulator_agent_states, METH_VARARGS, "Returns a list of the agent states with the specified IDs in the simulation environment."},
     {"set_active",  jbw::simulator_set_active, METH_VARARGS, "Sets whether the agent is active or inactive."},
     {"is_active",  jbw::simulator_is_active, METH_VARARGS, "Gets whether the agent is active or inactive."},
+    {"log",  jbw::simulator_log, METH_VARARGS, "Loads log from the simulator and returns infos about the simulation."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
