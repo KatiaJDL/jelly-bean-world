@@ -12,10 +12,12 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+
 from __future__ import absolute_import, division, print_function
 
 from math import ceil, floor, pi
 from .direction import Direction
+from datetime import datetime
 
 try:
 	import numpy as np
@@ -49,7 +51,7 @@ def agent_position(direction):
 		return (-0.1, 0), 3*pi/2
 
 class MapVisualizer(object):
-	def __init__(self, sim, sim_config, bottom_left, top_right, show_agent_perspective=True):
+	def __init__(self, sim, sim_config, bottom_left, top_right, show_agent_perspective=True, save_shot=False):
 		global _FIGURE_COUNTER
 		if not modules_loaded:
 			raise ImportError("numpy and matplotlib are required to use MapVisualizer.")
@@ -70,6 +72,8 @@ class MapVisualizer(object):
 			self._ax_agent = None
 			self._fig.set_size_inches((9, 9))
 		self._fig.tight_layout()
+
+		self.save_shot = save_shot
 
 	def __del__(self):
 		plt.close(self._fig)
@@ -172,6 +176,10 @@ class MapVisualizer(object):
 		plt.draw()
 		self._xlim = self._ax.get_xlim()
 		self._ylim = self._ax.get_ylim()
+
+		if self.save_shot:
+			dt_string = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+			plt.savefig(fname="shots/shot_" + dt_string)
 
 	def _pause(self, interval):
 		backend = plt.rcParams['backend']

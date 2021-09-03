@@ -2363,7 +2363,7 @@ private:
                 }
             }
         }
-        std::ofstream myFile("items_"+datetime(date)+".txt", std::ios::app);
+        std::ofstream myFile("results/logs/items_"+datetime(date)+".txt", std::ios::app);
         if (myFile) {
             myFile << "[" << nb_items[0];
             if (config.item_types.length > 1) {
@@ -2491,7 +2491,7 @@ status init(simulator<SimulatorData>& sim,
     }
 
     /* Write config in log file */
-    std::ofstream myFile("items_"+datetime(sim.date)+".txt", std::ios::app);
+    std::ofstream myFile("results/logs/items_"+datetime(sim.date)+".txt", std::ios::app);
     if (myFile) {
         myFile << "seed = " << seed;
         myFile << ", climate = " << sim.config.is_climate;
